@@ -17,7 +17,6 @@ from steem.amount import Amount
 from steem.instance import set_shared_steemd_instance
 from beem.instance import set_shared_steem_instance as sssi
 from beem.comment import Comment
-from steem.converter import Converter
 from beem import Steem as beem_Steem
 from beem.account import Account as beem_account
 from beem.amount import Amount as beem_amount
@@ -204,8 +203,8 @@ async def approve_mention_link(ctx,link):
 							await bot.say('Upvoted! Now commenting on mention comment!')
               #gets current time for later use
 							n = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-              #generating comment body
-							body= 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @'+p.author+' categorized as '+cat+'. This post was submitted via our Discord Community channel. Check us out on the following link!\n [SFR Discord](https://discord.gg/aXmdXRs)'
+              #generating comment body.
+							body= 'Flag mention comment has been approved! Thank you for reporting this abuse, @'+p.author+' categorized as '+cat+'. This post was submitted via our Discord Community channel. Check us out on the following link!\n [SFR Discord](https://discord.gg/aXmdXRs)'
 							#Posts approval comment
               try:
 								stm.post('', body, a.name, permlink=None, reply_identifier=id, json_metadata=None, comment_options=None, community=None, tags=None, beneficiaries=None, self_vote=False)
@@ -240,7 +239,7 @@ async def approve_mention_link(ctx,link):
     #builds markdown table for post
 		mdtable = markdown_table_builder(approved)
     #builds post body to include md table
-		body = '## This post triggers once we have approved flags from 8 distinct flaggers via the SteemFlagRewards Abuse Fighting Community on our [Discord](https://discord.gg/NXG3JrH) \n\nhttps://steemitimages.com/DQmTJj2SXdXcYLh3gtsziSEUXH6WP43UG6Ltoq9EZyWjQeb/frpaccount.jpg\n\n Flaggers have been designated as post beneficiaries. Our goal is to empower abuse fighting plankton and minnows and promote a Steem that is less-friendly to abuse. It is simple. Building abuse fighters equals less abuse. \n\n\n'+mdtable
+		body = '## This post triggers once we have approved flags from 8 distinct flaggers via the Abuse Fighting Community on our [Discord](<insert your discord server invite link>) \n\n<insert logo image if desired>\n\n Flaggers have been designated as post beneficiaries. Our goal is to empower abuse fighting plankton and minnows and promote a Steem that is less-friendly to abuse. It is simple. Building abuse fighters equals less abuse. \n\n\n'+mdtable
 		benelist = []
     # generates list of beneficiaries current determined by quantity of flags instead of weight plus one to appropriate 1/<total qty of flags> reward percentage the rewarding account
 		for author in approved_authors:
@@ -252,16 +251,13 @@ async def approve_mention_link(ctx,link):
     #sorts benelist by account
 		benelist = sorted(benelist, key=lambda k: k['account'])
 		try:
-			stm.post('Steem Flag Rewards Report - 8 Flagger Post -'+str(n),body, 'steemflagrewards', permlink=None, reply_identifier=None, json_metadata=None, comment_options=None, community=None, tags=['steemflagrewards','abuse','steem','steemit','flag'], beneficiaries=benelist, self_vote=False)
+			stm.post('Flag Rewards Report - 8 Flagger Post -'+str(n),body, a.name, permlink=None, reply_identifier=None, json_metadata=None, comment_options=None, community=None, tags=['flagrewards','abuse','steem','steemit','flag'], beneficiaries=benelist, self_vote=False)
 			approved_authors = []
 			approved = []
 		except Exception as e:
 			print("Error posting:" +str(e))
 		else:
 			await bot.say("Report Published without Error")
-
-#unlocks Steem wallet. Steem python functionality being deprecated
-steem.wallet.unlock()
 
 #unlocks Beem wallet w environmental variable
 stm.wallet.unlock(os.getenv('PASSPHRASE'))
