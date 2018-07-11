@@ -1,0 +1,5 @@
+beem==0.19.47
+discord==0.0.2
+pytablereader==0.20.2
+pytablewriter==0.30.0
+steem==1.0.1
