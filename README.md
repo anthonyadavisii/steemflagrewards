@@ -7,8 +7,8 @@ How can you run your own flag incentivization bot for your community? Although S
 Requirements
 1. Discord Server with admin role and channel id for approvals.
 2. Discord App for bot. (https://discordapp.com/developers/applications/me)
-3. Python Scripting environment with dependent libraries installed. (Future iterations of code will have requirements file included)
+3. Python Scripting environment with dependent libraries installed.
 
-With the above requirements met, you should be able to add the app to yoru Discord, run the bot code in python (make sure you input the passphrase) and test the ?approve_mention_link command. I plan to create a more comprehensive guide in the future.
+With the above requirements met, you should be able to add the app to yoru Discord, run the bot code in python (make sure you input the passphrase) and test the ?approve command. I plan to create a more comprehensive guide in the future.
 
-Lastly, a new revision of the code has been worked by @flugschwein and we are in the testing phase. This code will MUCH more robust and resilient with features such as approvals being input into SQLlite and full cutover to Beem libraries.
+~~Lastly, a new revision of the code has been worked by @flugschwein and we are in the testing phase. This code will MUCH more robust and resilient with features such as approvals being input into SQLlite and full cutover to Beem libraries.~~
