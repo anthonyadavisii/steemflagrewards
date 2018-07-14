@@ -87,7 +87,7 @@ def report():
     table = '|Link|Flagger|Removed Rewards|Category|\n|:----|:-------|:---------------:|:--------|'
     count = 0
     for q in sql.fetchall():
-        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], round(q[2], 3), q[3])
+        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], str(round(float(q[2]), 3)), q[3])
         count += 1
     body = '## This post triggers once we have approved flags from 8 distinct flaggers via the SteemFlagRewards Abuse ' \
            'Fighting Community on our [Discord](https://discord.gg/NXG3JrH) ' \

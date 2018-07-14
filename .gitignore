@@ -102,3 +102,4 @@ ENV/
 
 # special ide
 .idea/
+SFR.db
