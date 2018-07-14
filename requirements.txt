@@ -1,2 +1,2 @@
 beem==0.19.48
-discord==1.0.0a
+git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py
