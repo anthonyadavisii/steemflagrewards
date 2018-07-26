@@ -10,6 +10,7 @@ from beem.account import Account
 from beem.comment import Comment
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
+from beem.utils import construct_authorperm, reputation_to_score
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
@@ -108,7 +109,7 @@ def report():
         parse_body=True, self_vote=False)
     cursor.execute('UPDATE steemflagrewards SET included = 1 WHERE flagger in flaggers;')
     db.commit()
-    return '{}/{}'.format(rep['operations'][0][1]['author'], rep['operations'][0][1]['permlink'])
+    return construct_authorperm(rep)
 
 
 loop = asyncio.new_event_loop()
@@ -183,7 +184,7 @@ async def approve(ctx, link):
     if q > 8:
         await ctx.send('Hit flagger threshold. Posting report.')
         r = report()
-        msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/@{}'.format(
+        msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/{}'.format(
             r)
         await ctx.send(msg)
         postpromo = bot.get_channel(426612204717211648)
@@ -212,6 +213,7 @@ async def status(ctx):
     embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3))
     embed.add_field(name='Voting Power', value=round(sfr.get_voting_power(), 2))
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3))
+    embed.add_field(name='Reputation', value=round(reputation_to_score(sfr['reputation']), 3))
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']))
