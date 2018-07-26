@@ -261,6 +261,8 @@ async def sdl(ctx, cmd: str, *mode: str):
             await ctx.send('Please provide at least one account name.')
             return
         for i in mode:
+            if '@' in i:
+                i = i.split('@')[-1]
             try:
                 acc = Account(i)
             except AccountDoesNotExistsException:
@@ -286,6 +288,8 @@ async def sdl(ctx, cmd: str, *mode: str):
             await ctx.send('Please provide at least one account name.')
             return
         for i in mode:
+            if '@' in i:
+                i = i.split('@')[-1]
             if not cursor.execute('SELECT name FROM sdl WHERE name == ?', (i,)).fetchall():
                 await ctx.send(f'Could not find an account with the name @{i} in the list.')
                 continue
