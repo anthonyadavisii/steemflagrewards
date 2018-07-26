@@ -82,13 +82,11 @@ def report():
     cursor.execute(
         'INSERT INTO flaggers SELECT DISTINCT flagger FROM steemflagrewards WHERE included == 0 ORDER BY created ASC LIMIT 8;')
     sql = cursor.execute(
-        'SELECT \'https://steemit.com/\' || post || \'#\' || comment, flagger, \'$\' || payout, category FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
+        'SELECT \'[Comment](https://steemit.com/\' || post || \'#\' || comment || \')\', \'@\' || flagger, \'$\' || ROUND(payout, 3), category FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
     db.commit()
     table = '|Link|Flagger|Removed Rewards|Category|\n|:----|:-------|:---------------:|:--------|'
-    count = 0
     for q in sql.fetchall():
-        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], str(round(float(q[2]), 3)), q[3])
-        count += 1
+        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], q[2], q[3])
     body = '## This post triggers once we have approved flags from 8 distinct flaggers via the SteemFlagRewards Abuse ' \
            'Fighting Community on our [Discord](https://discord.gg/NXG3JrH) ' \
            '\n\nhttps://steemitimages.com/DQmTJj2SXdXcYLh3gtsziSEUXH6WP43UG6Ltoq9EZyWjQeb/frpaccount.jpg\n\n Flaggers ' \
@@ -98,10 +96,12 @@ def report():
     logging.info('Generated post body')
     benlist = []
     sql = cursor.execute(
-        'SELECT flagger, COUNT(*) FROM steemflagrewards WHERE flagger in flaggers GROUP BY flagger ORDER BY flagger;')
+        '''SELECT flagger, COUNT(*) * 100 * 10 / (SELECT COUNT(*) FROM steemflagrewards WHERE included == 0 AND 
+        flagger IN flaggers) FROM steemflagrewards WHERE flagger in flaggers AND included == 0 GROUP BY flagger ORDER 
+        BY flagger;''')
+    # Exchange 100 in line 99 with the percentage of the post rewards you want the flaggers to receive
     for q in sql.fetchall():
-        benlist.append({'account': q[0], 'weight': int((q[1] / count) * 100 * 10)})
-        # Exchange 100 with the percentage of the post rewards you want the flaggers to receive
+        benlist.append({'account': q[0], 'weight': q[1]})
     rep = stm.post(
         'Steem Flag Rewards Report - 8 Flagger Post - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")),
         body, 'steemflagrewards', tags=['steemflagrewards', 'abuse', 'steem', 'steemit', 'flag'], beneficiaries=benlist,
@@ -151,7 +151,7 @@ async def approve(ctx, link):
             await ctx.send('Downvote confirmed')
             sfrdvote = v
             vote_pct = stm.rshares_to_vote_pct(abs(int(v['rshares'])), steem_power=sfrsp,
-                                               voting_power=sfr.get_voting_power())
+                                               voting_power=sfr.get_voting_power() * 100)
             weight = round((vote_pct / 10000) * 100)
             if weight >= 83:
                 weight = 100
@@ -164,7 +164,7 @@ async def approve(ctx, link):
         await ctx.send('Apparently, the post wasn\'t flagged!')
         return
     logging.info('Attempting to vote now.')
-    flaggers_comment.vote(weight=weight, account='steemflagrewards')
+    flaggers_comment.upvote(weight=weight, voter='steemflagrewards')
     body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/aXmdXRs)'.format(
         flaggers_comment['author'], cat)
     await asyncio.sleep(get_wait_time(sfr))
@@ -183,7 +183,8 @@ async def approve(ctx, link):
     if q > 8:
         await ctx.send('Hit flagger threshold. Posting report.')
         r = report()
-        msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/@{}'.format(r)
+        msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/@{}'.format(
+            r)
         await ctx.send(msg)
         postpromo = bot.get_channel(426612204717211648)
         await postpromo.send(msg)
