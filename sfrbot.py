@@ -8,6 +8,7 @@ import discord
 from beem import Steem
 from beem.account import Account
 from beem.comment import Comment
+from beem.exceptions import AccountDoesNotExistsException
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
 from beem.utils import construct_authorperm, reputation_to_score
@@ -51,6 +52,7 @@ categories = ['bid bot abuse',
 # cursor.execute('''CREATE TABLE steemflagrewards
 # (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL)''')
 # cursor.execute('CREATE TABLE flaggers (name TEXT)')
+# cursor.execute('CREATE TABLE sdl (name TEXT, created TEXT, delegation BOOL)')
 # db.commit()
 ##################################################
 
@@ -112,9 +114,23 @@ def report():
     return construct_authorperm(rep)
 
 
+def fill_embed(embed:discord.Embed, names:list, template:str):
+    """
+    Function to add the contents of a list to a discord embed keeping the message size limit in mind
+    """
+    value = ''
+    for n in names:
+        if len(value + template.format(n[0])) < 1024:
+            value += template.format(n[0])
+        else:
+            embed.add_field(name='...', value=value)
+            value = template.format(n[0])
+    embed.add_field(name='...', value=value)
+
+
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
-bot = Bot(description='SteemFlagRewards Bot', command_prefix='?', pm_help=True)
+bot = Bot(description='SteemFlagRewards Bot', command_prefix='?')
 
 
 @bot.command()
@@ -189,10 +205,13 @@ async def approve(ctx, link):
         await ctx.send(msg)
         postpromo = bot.get_channel(426612204717211648)
         await postpromo.send(msg)
+        sfr.claim_reward_balance()
     sfr.refresh()
     if sfr.get_voting_power() < 75:
         await ctx.send(
-            'Hey my mojo is getting low. I should take a break... HEY! Let\'s all take a break. Convince someone to share a hug. I\'ll be back.\n(To be precise that means that the VP of the @steemflagrewards account has gone below 75%.)\nCurrently my full vote is worth about {} STU.'.format(
+            'Hey my mojo is getting low. I should take a break... HEY! Let\'s all take a break. Convince someone to '
+            'share a hug. I\'ll be back.\n(To be precise that means that the VP of the @steemflagrewards account has '
+            'gone below 75%.)\nCurrently my full vote is worth about {} STU.'.format(
                 str(round(sfr.get_voting_value_SBD(), 3))))
 
 
@@ -219,6 +238,107 @@ async def status(ctx):
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']))
     embed.add_field(name='Awesomeness', value='Over 9000')
     await ctx.send(embed=embed)
+
+
+@bot.command()
+async def sdl(ctx, cmd: str, *mode: str):
+    """
+    Manage the list of the steemit defence league accounts with this command. Use it with ?sdl and one of the following
+    """
+    logging.info(f'{ctx.author.name} send sdl command with {cmd} ... {mode}')
+    permitted = [405584423950614529,  # Iamstan
+                 272137261548568576,  # Leonis
+                 222012811172249600,  # Flugschwein
+                 398204160538836993,  # Naturicia
+                 347739387712372747,  # Anthonyadavisii
+                 102394130176446464   # TheMarkyMark
+                 ]  # A list of users who are allowed to edit the list.
+    if cmd == 'add':
+        if ctx.author.id not in permitted:
+            await ctx.send('You do not have permissions to edit the SDL list.')
+            return
+        if not mode:
+            await ctx.send('Please provide at least one account name.')
+            return
+        for i in mode:
+            try:
+                acc = Account(i)
+            except AccountDoesNotExistsException:
+                await ctx.send(f'The account @{i} seems to not exist on the steem blockchain.')
+                continue
+            if cursor.execute('SELECT name FROM sdl WHERE name == ?', (acc.name,)).fetchall():
+                await ctx.send(f'Account @{acc.name} already exists in the list.')
+                continue
+            if acc['received_vesting_shares'].amount > 0:
+                delegation = True
+            else:
+                delegation = False
+            cursor.execute('INSERT INTO sdl VALUES (?, ?, ?)', (acc.name, acc['created'], delegation,))
+            await ctx.send(f'Added @{acc.name} to the list.')
+        db.commit()
+        if len(mode) > 1:
+            await ctx.send(':white_check_mark:')
+    elif cmd == 'remove':
+        if ctx.author.id not in permitted:
+            await ctx.send('You do not have permissions to edit the SDL list.')
+            return
+        if not mode:
+            await ctx.send('Please provide at least one account name.')
+            return
+        for i in mode:
+            if not cursor.execute('SELECT name FROM sdl WHERE name == ?', (i,)).fetchall():
+                await ctx.send(f'Could not find an account with the name @{i} in the list.')
+                continue
+            cursor.execute('DELETE FROM sdl WHERE name == ?', (i,))
+            await ctx.send(f'Removed @{i} from the list.')
+        db.commit()
+        if len(mode) > 1:
+            await ctx.send(':white_check_mark:')
+    elif cmd == 'list':
+        if 'steemd' in mode:
+            link = '[{0}](https://steemd.com/@{0})\n'
+        elif 'steemit' in mode:
+            link = '[{0}](https://steemit.com/@{0})\n'
+        else:
+            msg = '\n**Accounts with delegations**\n```\n'
+            names = cursor.execute('SELECT * FROM sdl ORDER BY delegation DESC, name ASC;').fetchall()
+            for n in names:
+                if n[2] == 0 and '**Accounts without delegations**' not in msg:
+                    msg += '```\n**Accounts without delegations**\n```\n'
+                msg += f'{n[0]}\n'
+            await ctx.send(msg + '```')
+            return
+        delegated = discord.Embed(title='SDL with delegation', description='A list of Steemit Defence League accounts with a delegation (potentially by @steem)', color=discord.Color.gold())
+        undelegated = discord.Embed(title='SDL without delegation', description='A list of Steemit Defence League accounts without delegations', color=discord.Color.blurple())
+        names = cursor.execute('SELECT name FROM sdl WHERE delegation == 1 ORDER BY name ASC;').fetchall()
+        fill_embed(delegated, names, link)
+        names = cursor.execute('SELECT name FROM sdl WHERE delegation == 0 ORDER BY name ASC;').fetchall()
+        fill_embed(undelegated, names, link)
+        if 'delegated' in mode:
+            await ctx.send(embed=delegated)
+        elif 'undelegated' in mode:
+            await ctx.send(embed=undelegated)
+        else:
+            await ctx.send(embed=delegated)
+            await ctx.send(embed=undelegated)
+    elif cmd == 'update':
+        for i in cursor.execute('SELECT name FROM sdl WHERE delegation == 1;').fetchall():
+            acc = Account(i[0])
+            if acc['received_vesting_shares'] == 0:
+                cursor.execute('UPDATE sdl SET delegation = 0 WHERE name == ?', i)
+                await ctx.send(f'@{i[0]} got his delegation removed. :tada:')
+                continue
+            await ctx.send(f'@{i[0]} still got his delegation :(')
+        db.commit()
+    elif cmd == 'file':
+        filename = '{}.steemitdefenseleague.txt'.format(datetime.datetime.now().strftime('%Y%m%d'))
+        with open(filename, 'w+') as f:
+            accounts = cursor.execute('SELECT name FROM sdl ORDER BY name ASC;').fetchall()
+            for i in accounts:
+                f.write(i[0] + '\n')
+        await ctx.send(file=discord.File(filename))
+    else:
+        await ctx.send('Unknown command.')
 
 
 def main():
