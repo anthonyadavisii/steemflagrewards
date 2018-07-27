@@ -11,4 +11,7 @@ Requirements
 
 With the above requirements met, you should be able to add the app to yoru Discord, run the bot code in python (make sure you input the passphrase) and test the ?approve command. I plan to create a more comprehensive guide in the future.
 
-~~Lastly, a new revision of the code has been worked by @flugschwein and we are in the testing phase. This code will MUCH more robust and resilient with features such as approvals being input into SQLlite and full cutover to Beem libraries.~~
+### TODO
+- [ ] Only one steemflagrewards comment per main post/flagged comment to prevent spam
+- [ ] `setup.py` and PyPi listing for easier usage
+- [ ] Queuing up any votes if the VP of the @steemflagrewards account is low
