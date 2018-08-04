@@ -114,7 +114,7 @@ def report():
     return construct_authorperm(rep)
 
 
-def fill_embed(embed:discord.Embed, names:list, template:str):
+def fill_embed(embed: discord.Embed, names: list, template: str):
     """
     Function to add the contents of a list to a discord embed keeping the message size limit in mind
     """
@@ -162,6 +162,18 @@ async def approve(ctx, link):
         return
     await ctx.send('Abuse category acknowledged as {}'.format(cat))
     flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']))
+    if flagged_post['author'] == sfr.name:  # Check if flag is a follow on flag
+        for i in range(2):
+            flagged_post = Comment('{}/{}'.format(flagged_post['parent_author'], flagged_post['parent_permlink']))
+        follow_on = True
+        await ctx.send('Follow on flag spotted')
+    else:
+        follow_on = False
+        cursor.execute('SELECT post FROM steemflagrewards WHERE post == ?', (flagged_post.authorperm,))
+        if cursor.fetchall():
+            await ctx.send('There has already been some flagging happenin\' on that post/comment. Please use the follow on flag feature.')
+            return
+    logging.info(f'Flagged post:{flagged_post.authorperm}')
     weight = 0
     for v in flagged_post['active_votes']:
         if int(v['rshares']) < 0 and v['voter'] == flagger['name']:
@@ -181,15 +193,17 @@ async def approve(ctx, link):
         await ctx.send('Apparently, the post wasn\'t flagged!')
         return
     logging.info('Attempting to vote now.')
-    flaggers_comment.upvote(weight=weight, voter='steemflagrewards')
-    body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/aXmdXRs)'.format(
-        flaggers_comment['author'], cat)
-    await asyncio.sleep(get_wait_time(sfr))
-    stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
-             community='SFR', parse_body=True, author='steemflagrewards')
-    await ctx.send('Upvoted and commented.')
+    flaggers_comment.upvote(weight=weight, voter=sfr.name)
+    await ctx.send('Upvoted.')
+    if not follow_on:
+        body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/aXmdXRs)'.format(
+            flaggers_comment['author'], cat)
+        await asyncio.sleep(get_wait_time(sfr))
+        stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
+                 community='SFR', parse_body=True, author=sfr.name)
+        await ctx.send('Commented.')
     cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?)', (
-        flagger['name'], flaggers_comment.authorperm, flagged_post.authorperm, cat, flaggers_comment['created'], False,
+        flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, cat, flaggers_comment['created'], False,
         stm.rshares_to_sbd(sfrdvote['rshares'])))
     db.commit()
     q = \
@@ -228,14 +242,16 @@ async def status(ctx):
     embed.add_field(name='Mentions', value=cursor.execute(
         'SELECT COUNT(comment) FROM steemflagrewards WHERE included == 0;').fetchone()[0], inline=True)
     embed.add_field(name='Removed payouts in the last 7 days', value=round(cursor.execute(
-        'SELECT SUM(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()[0], 3), inline=True)
+        'SELECT SUM(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()[0], 3),
+                    inline=True)
     embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=True)
     embed.add_field(name='Voting Power', value=round(sfr.get_voting_power(), 2), inline=True)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=True)
     embed.add_field(name='Reputation', value=round(reputation_to_score(sfr['reputation']), 3), inline=True)
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
-                    value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']), inline=True)
+                    value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
+                    inline=True)
     embed.add_field(name='Awesomeness', value='Over 9000', inline=True)
     await ctx.send(embed=embed)
 
@@ -251,7 +267,7 @@ async def sdl(ctx, cmd: str, *mode: str):
                  222012811172249600,  # Flugschwein
                  398204160538836993,  # Naturicia
                  347739387712372747,  # Anthonyadavisii
-                 102394130176446464   # TheMarkyMark
+                 102394130176446464  # TheMarkyMark
                  ]  # A list of users who are allowed to edit the list.
     if cmd == 'add':
         if ctx.author.id not in permitted:
@@ -312,8 +328,12 @@ async def sdl(ctx, cmd: str, *mode: str):
                 msg += f'{n[0]}\n'
             await ctx.send(msg + '```')
             return
-        delegated = discord.Embed(title='SDL with delegation', description='A list of Steemit Defence League accounts with a delegation (potentially by @steem)', color=discord.Color.gold())
-        undelegated = discord.Embed(title='SDL without delegation', description='A list of Steemit Defence League accounts without delegations', color=discord.Color.blurple())
+        delegated = discord.Embed(title='SDL with delegation',
+                                  description='A list of Steemit Defence League accounts with a delegation (potentially by @steem)',
+                                  color=discord.Color.gold())
+        undelegated = discord.Embed(title='SDL without delegation',
+                                    description='A list of Steemit Defence League accounts without delegations',
+                                    color=discord.Color.blurple())
         names = cursor.execute('SELECT name FROM sdl WHERE delegation == 1 ORDER BY name ASC;').fetchall()
         fill_embed(delegated, names, link)
         names = cursor.execute('SELECT name FROM sdl WHERE delegation == 0 ORDER BY name ASC;').fetchall()
