@@ -91,7 +91,7 @@ def report():
     for q in sql.fetchall():
         table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], q[2], q[3])
     body = '## This post triggers once we have approved flags from 8 distinct flaggers via the SteemFlagRewards Abuse ' \
-           'Fighting Community on our [Discord](https://discord.gg/NXG3JrH) ' \
+           'Fighting Community on our [Discord](https://discord.gg/7pqKmg5) ' \
            '\n\nhttps://steemitimages.com/DQmTJj2SXdXcYLh3gtsziSEUXH6WP43UG6Ltoq9EZyWjQeb/frpaccount.jpg\n\n Flaggers ' \
            'have been designated as post beneficiaries. Our goal is to empower abuse fighting plankton and minnows ' \
            'and promote a Steem that is less-friendly to abuse. It is simple. Building abuse fighters equals less ' \
@@ -196,7 +196,7 @@ async def approve(ctx, link):
     flaggers_comment.upvote(weight=weight, voter=sfr.name)
     await ctx.send('Upvoted.')
     if not follow_on:
-        body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/aXmdXRs)'.format(
+        body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
             flaggers_comment['author'], cat)
         await asyncio.sleep(get_wait_time(sfr))
         stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
