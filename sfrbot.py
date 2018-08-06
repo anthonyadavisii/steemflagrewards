@@ -164,7 +164,7 @@ bot = Bot(description='SteemFlagRewards Bot', command_prefix='?')
 
 @bot.command()
 async def approve(ctx, link):
-    """Checks post pody for @steemflagrewards mention and https://steemit.com/ and must be in the flag_comment_review
+    """Checks post body for @steemflagrewards mention and https://steemit.com/ and must be in the flag_comment_review
     channel id """
     global queueing
     if ctx.message.channel.id != 419711548769042432:
@@ -262,6 +262,22 @@ async def approve(ctx, link):
 
 
 @bot.command()
+async def queue(ctx):
+    queue = cursor.execute('SELECT comment, post FROM steemflagrewards WHERE queue == 1 ORDER BY created ASC;').fetchall()
+    if not queue:
+        await ctx.send('No mention in the queue')
+        return
+    sfr = Account('steemflagrewards')
+    queue_embed = discord.Embed(title='@steemflagrewards voting queue',
+                                description=f'Next vote will happen in {sfr.get_recharge_timedelta(95).total_seconds() // 60} minutes.',
+                                color=discord.Color.red())
+    for mention in queue:
+        queue_embed.add_field(name=f'Number {queue.index(mention)} in the queue',
+                              value=f'[{mention[0]}](https://steemit.com/{mention[1]}/{mention[0]})')
+    await ctx.send(embed=queue_embed)
+
+
+@bot.command()
 async def sdl(ctx, cmd: str, *mode: str):
     """
     Manage the list of the steemit defence league accounts with this command. Use it with ?sdl and one of the following
@@ -272,7 +288,7 @@ async def sdl(ctx, cmd: str, *mode: str):
                  222012811172249600,  # Flugschwein
                  398204160538836993,  # Naturicia
                  347739387712372747,  # Anthonyadavisii
-                 102394130176446464  # TheMarkyMark
+                 102394130176446464,  # TheMarkyMark
                  ]  # A list of users who are allowed to edit the list.
     if cmd == 'add':
         if ctx.author.id not in permitted:
