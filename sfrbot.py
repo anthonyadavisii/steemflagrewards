@@ -123,9 +123,9 @@ def fill_embed(embed: discord.Embed, names: list, template: str):
         if len(value + template.format(n[0])) < 1024:
             value += template.format(n[0])
         else:
-            embed.add_field(name='...', value=value, inline=True)
+            embed.add_field(name='...', value=value, inline=False)
             value = template.format(n[0])
-    embed.add_field(name='...', value=value, inline=True)
+    embed.add_field(name='...', value=value, inline=False)
 
 
 async def queue_voting(ctx, sfr):
@@ -395,23 +395,23 @@ async def status(ctx):
     embed = discord.Embed(title='SFR Status', description='The current status of the SFR bot and account.',
                           color=discord.Color.blue())
     sfr = Account('steemflagrewards')
-    embed.add_field(name='Bot', value='Up and running', inline=True)
+    embed.add_field(name='Bot', value='Up and running', inline=False)
     embed.add_field(name='Flaggers', value='{}/9'.format(cursor.execute(
-        'SELECT COUNT(DISTINCT flagger) FROM steemflagrewards WHERE included == 0;').fetchone()[0]), inline=True)
+        'SELECT COUNT(DISTINCT flagger) FROM steemflagrewards WHERE included == 0;').fetchone()[0]), inline=False)
     embed.add_field(name='Mentions', value=cursor.execute(
-        'SELECT COUNT(comment) FROM steemflagrewards WHERE included == 0;').fetchone()[0], inline=True)
+        'SELECT COUNT(comment) FROM steemflagrewards WHERE included == 0;').fetchone()[0], inline=False)
     embed.add_field(name='Removed payouts in the last 7 days', value=round(cursor.execute(
         'SELECT SUM(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()[0], 3),
-                    inline=True)
-    embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=True)
-    embed.add_field(name='Voting Power', value=round(sfr.get_voting_power(), 2), inline=True)
-    embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=True)
-    embed.add_field(name='Reputation', value=round(reputation_to_score(sfr['reputation']), 3), inline=True)
+                    inline=False)
+    embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=False)
+    embed.add_field(name='Voting Power', value=round(sfr.get_voting_power(), 2), inline=False)
+    embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
+    embed.add_field(name='Reputation', value=round(reputation_to_score(sfr['reputation']), 3), inline=False)
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
-                    inline=True)
-    embed.add_field(name='Awesomeness', value='Over 9000', inline=True)
+                    inline=False)
+    embed.add_field(name='Awesomeness', value='Over 9000', inline=False)
     await ctx.send(embed=embed)
 
 
