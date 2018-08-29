@@ -120,7 +120,9 @@ async def command_decorator(func):
 
 
 async def queue_voting(ctx, sfr):
-    """Voting on steemflagrewards mentions one after one once the voting power of the account reached 90%. This maintains a rather staple flagging ROI"""
+    """
+    Voting on steemflagrewards mentions one after one once the voting power of the account reached 90%. This maintains a rather staple flagging ROI
+    """
     global queueing
     while queueing:
         while sfr.get_voting_power() < queue_vp:  # For not failing because of unexpected manual votes
@@ -143,9 +145,9 @@ async def queue_voting(ctx, sfr):
             body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
                 flagger, cat)
             await asyncio.sleep(get_wait_time(sfr))
-            # stm.post('', body,
-            #         reply_identifier=authorperm,
-            #         community='SFR', parse_body=True, author=sfr.name)
+            stm.post('', body,
+                    reply_identifier=authorperm,
+                    community='SFR', parse_body=True, author=sfr.name)
             await ctx.send('Commented on queued mention.')
         cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
     return
@@ -185,18 +187,25 @@ async def approve(ctx, link):
         return
     await ctx.send('Abuse category acknowledged as {}'.format(' '.join(cats)))
     flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']))
+    cursor.execute('SELECT * FROM steemflagrewards WHERE comment == ?', (flagged_post.authorperm,))
     if flagged_post['author'] == sfr.name:  # Check if flag is a follow on flag
         for i in range(2):
             flagged_post = Comment('{}/{}'.format(flagged_post['parent_author'], flagged_post['parent_permlink']))
         follow_on = True
         await ctx.send('Follow on flag spotted')
+    elif cursor.fetchone():
+        follow_on = True
+        while True:
+            flaggers_comment = Comment(flaggers_comment['parent_author'], flaggers_comment['parent_permlink'])
+            if cursor.execute('SELECT * FROM steemflagrewards WHERE post == ?', (flaggers_comment.permlink,)).fetchall():
+                break
     else:
         follow_on = False
         cursor.execute('SELECT post FROM steemflagrewards WHERE post == ?', (flagged_post.authorperm,))
         if cursor.fetchall():
             await ctx.send(
-                'There has already been some flagging happenin\' on that post/comment. Please use the follow on flag feature.')
-            return
+                'There has already been some flagging happenin\' on that post/comment. Please consider using the follow on flag feature if you don\'t make a good comment.')
+            follow_on = True
     logging.info(f'Flagged post:{flagged_post.authorperm}')
     weight = 0
     for v in flagged_post['active_votes']:
