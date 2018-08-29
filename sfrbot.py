@@ -119,7 +119,6 @@ async def command_decorator(func):
             await args[0].send(':white_check_mark:')
 
 
-
 async def queue_voting(ctx, sfr):
     """Voting on steemflagrewards mentions one after one once the voting power of the account reached 90%. This maintains a rather staple flagging ROI"""
     global queueing
@@ -204,11 +203,26 @@ async def approve(ctx, link):
         if int(v['rshares']) < 0 and v['voter'] == flagger['name']:
             await ctx.send('Downvote confirmed')
             sfrdvote = v
-            vote_pct = stm.rshares_to_vote_pct(abs(int(v['rshares'])), steem_power=sfrsp,
+
+            follow_on_ROI = 0.1
+            new_flag_ROI = 0.2
+            first_flag_ROI = 0.35
+            ROI = 1.05
+
+            if follow_on is True:
+                ROI += follow_on_ROI
+            elif follow_on is False:
+                ROI += new_flag_ROI
+            else:
+                await ctx.send('Something went very wrong. I\'m sorry about the inconvenience.')
+            if not cursor.execute('SELECT flagger FROM steemflagrewards WHERE flagger == ?;', (flagger.name,)):
+                ROI += first_flag_ROI
+
+            vote_pct = stm.rshares_to_vote_pct(int(abs(int(v['rshares'])) * ROI),  # ROI for the flaggers
+                                               steem_power=sfrsp,
                                                voting_power=queue_vp if queueing else sfr.get_voting_power() * 100)
 
             weight = round((vote_pct / 10000) * 100)
-            weight = min(weight + 10, 100)  # Flagging ROI incentivation
     if sfr.get_vote(flaggers_comment):
         await ctx.send('Already voted on this!')
         return
@@ -226,13 +240,15 @@ async def approve(ctx, link):
             body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{}. {} This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
                 flaggers_comment['author'], cat_string)
             await asyncio.sleep(get_wait_time(sfr))
-            stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
-                    community='SFR', parse_body=True, author=sfr.name)
+            stm.post('', body,
+                     reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
+                     community='SFR', parse_body=True, author=sfr.name)
             await ctx.send('Commented.')
     else:
         await ctx.send('Queued upvote for later on.')
     cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
-        flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats), flaggers_comment['created'], False,
+        flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
+        flaggers_comment['created'], False,
         stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on))
     db.commit()
     q = \
@@ -396,7 +412,8 @@ async def status(ctx):
     embed.add_field(name='Mentions', value=cursor.execute(
         'SELECT COUNT(comment) FROM steemflagrewards WHERE included == 0;').fetchone()[0], inline=False)
     embed.add_field(name='Removed payouts in the last 7 days', value=round(cursor.execute(
-        'SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()[0], 3),
+        'SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()[
+                                                                               0], 3),
                     inline=False)
     embed.add_field(name='Total mentions approved in the last 7 days', value=cursor.fetchone()[1])
     embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=False)
