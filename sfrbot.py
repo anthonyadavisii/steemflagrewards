@@ -109,6 +109,17 @@ def fill_embed(embed: discord.Embed, names: list, template: str):
     embed.add_field(name='...', value=value, inline=False)
 
 
+async def command_decorator(func):
+    async def wrapper(*args, **kwargs):
+        try:
+            await func(*args, **kwargs)
+        except Exception as e:
+            await args[0].send(f'Encountered an {e} while executing {func.__name__}.')
+        finally:
+            await args[0].send(':white_check_mark:')
+
+
+
 async def queue_voting(ctx, sfr):
     """Voting on steemflagrewards mentions one after one once the voting power of the account reached 90%. This maintains a rather staple flagging ROI"""
     global queueing
@@ -147,6 +158,7 @@ bot = Bot(description='SteemFlagRewards Bot', command_prefix='?')
 
 
 @bot.command()
+@command_decorator
 async def approve(ctx, link):
     """Checks post body for @steemflagrewards mention and https://steemit.com/ and must be in the flag_comment_review
     channel id """
@@ -247,6 +259,7 @@ async def approve(ctx, link):
 
 
 @bot.command()
+@command_decorator
 async def queue(ctx):
     queue = cursor.execute(
         'SELECT comment, post FROM steemflagrewards WHERE queue == 1 ORDER BY created ASC;').fetchall()
@@ -264,6 +277,7 @@ async def queue(ctx):
 
 
 @bot.command()
+@command_decorator
 async def sdl(ctx, cmd: str, *mode: str):
     """
     Manage the list of the steemit defence league accounts with this command. Use it with ?sdl and one of the following
@@ -301,8 +315,6 @@ async def sdl(ctx, cmd: str, *mode: str):
             cursor.execute('INSERT INTO sdl VALUES (?, ?, ?)', (acc.name, acc['created'], delegation,))
             await ctx.send(f'Added @{acc.name} to the list.')
         db.commit()
-        if len(mode) > 1:
-            await ctx.send(':white_check_mark:')
     elif cmd == 'remove':
         if ctx.author.id not in permitted:
             await ctx.send('You do not have permissions to edit the SDL list.')
@@ -319,8 +331,6 @@ async def sdl(ctx, cmd: str, *mode: str):
             cursor.execute('DELETE FROM sdl WHERE name == ?', (i,))
             await ctx.send(f'Removed @{i} from the list.')
         db.commit()
-        if len(mode) > 1:
-            await ctx.send(':white_check_mark:')
     elif cmd == 'list':
         if 'steemd' in mode:
             link = '[{0}](https://steemd.com/@{0})\n'
@@ -373,6 +383,7 @@ async def sdl(ctx, cmd: str, *mode: str):
 
 
 @bot.command()
+@command_decorator
 async def status(ctx):
     """Returns the current status of the SFR account."""
     logging.info('Registered status command')
@@ -402,6 +413,7 @@ async def status(ctx):
 
 
 @bot.command()
+@command_decorator
 async def updatenodes(ctx):
     """Updates the nodes using the built in function that is based on hourly run benchmarks. Thanks holger80 for that feature."""
     global stm
