@@ -314,6 +314,7 @@ async def sdl(ctx, cmd: str, *mode: str):
                  398204160538836993,  # Naturicia
                  347739387712372747,  # Anthonyadavisii
                  102394130176446464,  # TheMarkyMark
+                 437647893072052233,  # Serylt
                  ]  # A list of users who are allowed to edit the list.
     if cmd == 'add':
         if ctx.author.id not in permitted:
