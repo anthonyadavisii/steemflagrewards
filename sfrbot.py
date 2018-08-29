@@ -230,8 +230,8 @@ async def approve(ctx, link):
             body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
                 flaggers_comment['author'], cat)
             await asyncio.sleep(get_wait_time(sfr))
-            # stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
-            #         community='SFR', parse_body=True, author=sfr.name)
+            stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
+                    community='SFR', parse_body=True, author=sfr.name)
             await ctx.send('Commented.')
     else:
         await ctx.send('Queued upvote for later on.')
