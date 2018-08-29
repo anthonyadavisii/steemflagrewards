@@ -15,6 +15,8 @@ from beem.utils import construct_authorperm, reputation_to_score
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
+from .categories import CAT_DESCRIPTION, CAT_LIST
+
 logging.basicConfig(level=logging.INFO)
 
 db = sqlite3.connect('SFR.db')
@@ -25,28 +27,6 @@ stm = Steem(node=nodes)
 set_shared_steem_instance(stm)
 queueing = False
 queue_vp = 95
-
-categories = ['bid bot abuse',
-              'bid bot misuse',
-              'collusive voting',
-              'comment self-vote violation',
-              'comment spam',
-              'copy/paste',
-              'death threats',
-              'failure to tag nsfw',
-              'identity theft',
-              'manipulation',
-              'phishing',
-              'plagiarism',
-              'post farming',
-              'scam',
-              'spam',
-              'tag abuse',
-              'tag misuse',
-              'testing for rewards',
-              'threat',
-              'vote abuse',
-              'vote farming']  # Because the categories are sorted alphabetically, comment spam will be found before spam is, causing everything to work out as intended.
 
 
 ##################################################
@@ -61,10 +41,11 @@ categories = ['bid bot abuse',
 
 def check_cat(comment):
     """Returning the matching category of abuse"""
-    for cat in categories:
+    cats = []
+    for cat in CAT_LIST:
         if cat in comment.lower():
-            return cat
-    return
+            cats.append(cat)
+    return cats
 
 
 def get_wait_time(account):
@@ -187,11 +168,11 @@ async def approve(ctx, link):
     if '@steemflagrewards' not in flaggers_comment['body']:
         await ctx.send('Could not find a @steemflagrewards mention. Please check the comment.')
         return
-    cat = check_cat(flaggers_comment['body'])
-    if cat is None:
+    cats = check_cat(flaggers_comment['body'])
+    if not cats:
         await ctx.send('No abuse category found.')
         return
-    await ctx.send('Abuse category acknowledged as {}'.format(cat))
+    await ctx.send('Abuse category acknowledged as {}'.format(' '.join(cats)))
     flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']))
     if flagged_post['author'] == sfr.name:  # Check if flag is a follow on flag
         for i in range(2):
@@ -227,8 +208,11 @@ async def approve(ctx, link):
         flaggers_comment.upvote(weight=weight, voter=sfr.name)
         await ctx.send('Upvoted.')
         if not follow_on:
-            body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
-                flaggers_comment['author'], cat)
+            cat_string = ''
+            for i in cats:
+                cat_string += CAT_DESCRIPTION[i]
+            body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{}. {} This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
+                flaggers_comment['author'], cat_string)
             await asyncio.sleep(get_wait_time(sfr))
             stm.post('', body, reply_identifier='{}/{}'.format(flaggers_comment['author'], flaggers_comment['permlink']),
                     community='SFR', parse_body=True, author=sfr.name)
@@ -236,7 +220,7 @@ async def approve(ctx, link):
     else:
         await ctx.send('Queued upvote for later on.')
     cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
-        flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, cat, flaggers_comment['created'], False,
+        flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats), flaggers_comment['created'], False,
         stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on))
     db.commit()
     q = \
