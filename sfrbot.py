@@ -43,6 +43,8 @@ def check_cat(comment):
     cats = []
     for cat in CAT_LIST:
         if cat in comment.lower():
+            if cat == 'spam' and 'comment spam' in comment.lower():
+                continue
             cats.append(cat)
     return cats
 
@@ -123,7 +125,7 @@ async def queue_voting(ctx, sfr):
             queueing = False
             await ctx.send('No more mentions left in the queue. Going back to instant voting mode.')
             return
-        authorperm, flagger, cat, weight, follow_on = next_queued
+        authorperm, flagger, cats, weight, follow_on = next_queued
         comment = Comment(authorperm)
         try:
             comment.upvote(weight, sfr.name)
@@ -131,17 +133,22 @@ async def queue_voting(ctx, sfr):
             await ctx.send(
                 'Sadly one comment had to be skipped because it got too old. Maybe the author can delete the comment and write a new one?')
             cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
+            db.commit()
             continue
         await ctx.send(f'Sucessfully voted on mention by {flagger} out of the queue.')
         if not follow_on:
-            body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{} categorized as {}. This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
-                flagger, cat)
+            cat_string = ''
+            for i in cats.split(', '):
+                cat_string += CAT_DESCRIPTION[i]
+            body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{}. {} This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
+                flagger, cat_string)
             await asyncio.sleep(get_wait_time(sfr))
             stm.post('', body,
                      reply_identifier=authorperm,
                      community='SFR', parse_body=True, author=sfr.name)
             await ctx.send('Commented on queued mention.')
         cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
+        db.commit()
     return
 
 
@@ -198,7 +205,7 @@ async def approve(ctx, link):
             await ctx.send(
                 'There has already been some flagging happenin\' on that post/comment. Please consider using the follow on flag feature if you don\'t make a good comment.')
             follow_on = True
-    logging.info(f'Flagged post:{flagged_post.authorperm}')
+    logging.info(f'Flagged post: {flagged_post.authorperm}')
     weight = 0
     for v in flagged_post['active_votes']:
         if int(v['rshares']) < 0 and v['voter'] == flagger['name']:
@@ -438,7 +445,7 @@ async def updatenodes(ctx):
 @bot.event
 async def on_ready():
     global queueing
-    sfr = Account('steemflagrewards')
+    sfr = Account('flugbot')
     queue_length = cursor.execute('SELECT count(*) FROM steemflagrewards WHERE queue == 1;').fetchone()
     if sfr.get_voting_power() < queue_vp or queue_length[0] > 0:
         flag_comment_review = bot.get_channel(
