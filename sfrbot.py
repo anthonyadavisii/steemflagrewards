@@ -21,6 +21,8 @@ logging.basicConfig(level=logging.INFO)
 db = sqlite3.connect('SFR.db')
 cursor = db.cursor()
 
+sfr_name = 'steemflagrewards'
+
 nodes = NodeList().get_nodes()
 stm = Steem(node=nodes)
 set_shared_steem_instance(stm)
@@ -173,7 +175,7 @@ async def approve(ctx, link):
         await ctx.send('Please look at your link again. Could not find the linked comment.')
         return
     flagger = Account(flaggers_comment['author'])
-    sfr = Account('flugbot')
+    sfr = Account(sfr_name)
     sfrsp = stm.vests_to_sp(sfr['vesting_shares'].amount + sfr['received_vesting_shares'].amount - sfr[
         'delegated_vesting_shares'].amount)
     if '@steemflagrewards' not in flaggers_comment['body']:
@@ -183,7 +185,7 @@ async def approve(ctx, link):
     if not cats:
         await ctx.send('No abuse category found.')
         return
-    await ctx.send('Abuse category acknowledged as {}'.format(' '.join(cats)))
+    await ctx.send('Abuse category acknowledged as {}'.format(', '.join(cats)))
     flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']))
     cursor.execute('SELECT * FROM steemflagrewards WHERE comment == ?', (flagged_post.authorperm,))
     if flagged_post['author'] == sfr.name:  # Check if flag is a follow on flag
@@ -289,7 +291,7 @@ async def queue(ctx):
     if not queue:
         await ctx.send('No mention in the queue')
         return
-    sfr = Account('flugbot')
+    sfr = Account(sfr_name)
     queue_embed = discord.Embed(title='@steemflagrewards voting queue',
                                 description=f'Next vote will happen in {sfr.get_recharge_timedelta(queue_vp) // 60}.',
                                 color=discord.Color.red())
@@ -445,7 +447,7 @@ async def updatenodes(ctx):
 @bot.event
 async def on_ready():
     global queueing
-    sfr = Account('flugbot')
+    sfr = Account(sfr_name)
     queue_length = cursor.execute('SELECT count(*) FROM steemflagrewards WHERE queue == 1;').fetchone()
     if sfr.get_voting_power() < queue_vp or queue_length[0] > 0:
         flag_comment_review = bot.get_channel(
