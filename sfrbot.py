@@ -176,8 +176,6 @@ async def approve(ctx, link):
         return
     flagger = Account(flaggers_comment['author'])
     sfr = Account(sfr_name)
-    sfrsp = stm.vests_to_sp(sfr['vesting_shares'].amount + sfr['received_vesting_shares'].amount - sfr[
-        'delegated_vesting_shares'].amount)
     if '@steemflagrewards' not in flaggers_comment['body']:
         await ctx.send('Could not find a @steemflagrewards mention. Please check the comment.')
         return
@@ -229,10 +227,11 @@ async def approve(ctx, link):
                 ROI += first_flag_ROI
 
             vote_pct = stm.rshares_to_vote_pct(int(abs(int(v['rshares'])) * ROI),  # ROI for the flaggers
-                                               steem_power=sfrsp,
+                                               steem_power=sfr.sp,
                                                voting_power=queue_vp if queueing else sfr.get_voting_power() * 100)
-
-            weight = round((vote_pct / 10000) * 100)
+            min_vote_pct = stm.rshares_to_vote_pct(0.0245 / stm.get_sbd_per_rshares(), steem_power=sfr.sp,
+                                                   voting_power=queue_vp if queueing else sfr.get_voting_power() * 100)
+            weight = max(round((vote_pct / 10000) * 100), round((min_vote_pct / 10000) * 100))
     if sfr.get_vote(flaggers_comment):
         await ctx.send('Already voted on this!')
         return
