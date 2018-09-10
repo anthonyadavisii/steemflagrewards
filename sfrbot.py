@@ -1,4 +1,4 @@
-from categories import CAT_DESCRIPTION, CAT_LIST
+from categories import CAT_DESCRIPTION, CATEGORIES
 import asyncio
 import datetime
 import logging
@@ -43,7 +43,7 @@ queue_vp = 95
 def check_cat(comment):
     """Returning the matching category of abuse"""
     cats = []
-    for cat in CAT_LIST:
+    for cat in CATEGORIES:
         if cat in comment.lower():
             if cat == 'spam' and 'comment spam' in comment.lower():
                 continue
