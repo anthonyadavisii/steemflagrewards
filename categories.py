@@ -1,4 +1,4 @@
-categories = ['bid bot abuse',
+CATEGORIES = ['bid bot abuse',
               'collusive voting',
               'comment self-vote violation',
               'comment spam',
@@ -15,7 +15,7 @@ categories = ['bid bot abuse',
               'testing for rewards',
               'threat',
               'vote abuse',
-              'vote farming']  # Because the categories are sorted alphabetically, comment spam will be found before spam is, causing everything to work out as intended.  # Because the categories are sorted alphabetically, comment spam will be found before spam is, causing everything to work out as intended.
+              'vote farming']  # Because the categories are sorted alphabetically, comment spam will be found before spam is, causing everything to work out as intended.
 
 CAT_DESCRIPTION = {'bid bot abuse' : '\n* bid bot abuse\nYou bought votes to increase the rewards of your post above the value of its content.',
                    'collusive voting' : '\ndescription placeholder',
