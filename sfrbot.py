@@ -12,7 +12,7 @@ from beem.comment import Comment
 from beem.exceptions import AccountDoesNotExistsException, ContentDoesNotExistsException, VotingInvalidOnArchivedPost
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
-from beem.utils import construct_authorperm, reputation_to_score
+from beem.utils import construct_authorperm, reputation_to_score, addTzInfo
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
@@ -29,6 +29,7 @@ set_shared_steem_instance(stm)
 queueing = False
 queue_vp = 95
 
+STEEM_MIN_REPLY_INTERVAL = 20  # TODO: change to 3s once HF20 is active
 
 ##################################################
 # Uncomment for the initial setup of the database
@@ -52,15 +53,12 @@ def check_cat(comment):
 
 
 def get_wait_time(account):
-    """Preventing unability to comment, because of STEEM_MIN_REPLY_INTERVAL. Only works for one 'queued' comment."""
-    for i in account.history_reverse(only_ops='comment'):
-        if i['author'] == account['name']:
-            wait = datetime.datetime.utcnow() - parse(i['timestamp'])
-            wait = wait.seconds
-            if wait > 20:  # TODO: Change to 3 once HF20 is out
-                return 0
-            else:
-                return 20 - wait  # TODO: Change to 3 once HF20 is out as well
+    """Get the time (in seconds) required until the next comment can be posted.
+    Only works for one 'queued' comment.
+    """
+    account.refresh()
+    last_post_timedelta = addTzInfo(datetime.datetime.utcnow()) - account['last_post']
+    return max(0, STEEM_MIN_REPLY_INTERVAL - last_post_timedelta.total_seconds())
 
 
 def report():
