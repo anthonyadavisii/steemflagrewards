@@ -224,11 +224,16 @@ async def approve(ctx, link):
             if not cursor.execute('SELECT flagger FROM steemflagrewards WHERE flagger == ?;', (flagger.name,)):
                 ROI += first_flag_ROI
 
+            if queueing:
+                voting_power = queue_vp * 100
+            else:
+                voting_power = sfr.get_voting_power() * 100
             vote_pct = stm.rshares_to_vote_pct(int(abs(int(v['rshares'])) * ROI),  # ROI for the flaggers
                                                steem_power=sfr.sp,
-                                               voting_power=queue_vp if queueing else sfr.get_voting_power() * 100)
-            min_vote_pct = stm.rshares_to_vote_pct(0.0245 / stm.get_sbd_per_rshares(), steem_power=sfr.sp,
-                                                   voting_power=queue_vp if queueing else sfr.get_voting_power() * 100)
+                                               voting_power=voting_power)
+            min_vote_pct = stm.rshares_to_vote_pct(0.0245 / stm.get_sbd_per_rshares(),
+                                                   steem_power=sfr.sp,
+                                                   voting_power=voting_power)
             weight = max(round((vote_pct / 10000) * 100), round((min_vote_pct / 10000) * 100))
     if sfr.get_vote(flaggers_comment):
         await ctx.send('Already voted on this!')
