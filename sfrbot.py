@@ -429,7 +429,7 @@ async def status(ctx):
     embed.add_field(name='Voting Power', value=round(sfr.get_voting_power(), 2), inline=False)
     embed.add_field(name='VP --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
-    embed.add_field(name='Reputation', value=round(reputation_to_score(sfr['reputation']), 3), inline=False)
+    embed.add_field(name='Reputation', value=round(sfr.get_reputation(), 3), inline=False)
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
