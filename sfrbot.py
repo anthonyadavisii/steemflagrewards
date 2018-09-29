@@ -32,7 +32,7 @@ lsc = Client()
 queueing = False
 queue_vp = 95
 
-STEEM_MIN_REPLY_INTERVAL = 20  # TODO: change to 3s once HF20 is active
+STEEM_MIN_REPLY_INTERVAL = 3
 
 ##################################################
 # Uncomment for the initial setup of the database
@@ -123,7 +123,7 @@ async def queue_voting(ctx, sfr):
     """
     global queueing
     while queueing:
-        while sfr_acc.vp() < queue_vp:  # For not failing because of unexpected manual votes
+        while sfr.vp < queue_vp:  # For not failing because of unexpected manual votes
             await asyncio.sleep(sfr.get_recharge_timedelta(queue_vp).total_seconds())
             sfr.refresh()
         next_queued = cursor.execute(
@@ -422,6 +422,7 @@ async def sdl(ctx, cmd: str, *mode: str):
 async def status(ctx):
     """Returns the current status of the SFR account."""
     logging.info('Registered status command')
+    sfr_acc = lsc.account('steemflagrewards')
     embed = discord.Embed(title='SFR Status', description='The current status of the SFR bot and account.',
                           color=discord.Color.blue())
     sfr = Account(sfr_name,steem_instance=stm)
@@ -439,6 +440,7 @@ async def status(ctx):
     embed.add_field(name='VP --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
     embed.add_field(name='Reputation', value=round(sfr.get_reputation() , 3), inline=False)
+    embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['estimated_pct'] , 1), inline=False)
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
