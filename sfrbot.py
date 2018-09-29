@@ -29,7 +29,7 @@ set_shared_steem_instance(stm)
 queueing = False
 queue_vp = 95
 
-STEEM_MIN_REPLY_INTERVAL = 20  # TODO: change to 3s once HF20 is active
+STEEM_MIN_REPLY_INTERVAL = 3  # TODO: change to 3s once HF20 is active
 
 ##################################################
 # Uncomment for the initial setup of the database
