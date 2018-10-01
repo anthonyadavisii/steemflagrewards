@@ -18,4 +18,7 @@ WL = [
               'pjau',
               'serylt',
               'steevc',
+              'meno',
+              'fraenk'
+              'freebornangel'
               ]
