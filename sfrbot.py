@@ -30,7 +30,7 @@ stm = Steem(node=nodes)
 set_shared_steem_instance(stm)
 lsc = Client()
 queueing = False
-queue_vp = 95
+queue_vp = 85
 
 STEEM_MIN_REPLY_INTERVAL = 3
 
@@ -134,6 +134,14 @@ async def queue_voting(ctx, sfr):
             return
         authorperm, flagger, cats, weight, follow_on = next_queued
         comment = Comment(authorperm)
+        #gets post created date without timezone info for comparing to now
+        created = comment['created'].replace(tzinfo=None)
+        now=datetime.datetime.utcnow().replace(microsecond=0)
+        dif = now - created
+        ts = round(dif.total_seconds())
+        difmin=round((ts/60))
+        if(difmin < 15):
+             await asyncio.sleep(ts)
         try:
             comment.upvote(weight, sfr.name)
         except VotingInvalidOnArchivedPost:
@@ -252,6 +260,13 @@ async def approve(ctx, link):
         return
     if not queueing:
         logging.info('Attempting to vote now.')
+        created = flaggers_comment['created'].replace(tzinfo=None)
+        now=datetime.datetime.utcnow().replace(microsecond=0)
+        dif = now - created
+        ts = round(dif.total_seconds())
+        difmin=round((ts/60))
+        if(difmin < 15):
+             await asyncio.sleep(ts)
         flaggers_comment.upvote(weight=weight, voter=sfr.name)
         await ctx.send('Upvoted.')
         if not follow_on:
@@ -308,9 +323,15 @@ async def queue(ctx):
                                 color=discord.Color.red())
     for mention in queue:
         queue_embed.add_field(name=f'Number {queue.index(mention) + 1} in the queue',
-                              value=f'[{mention[0]}](https://steemit.com/{mention[1]}/{mention[0]})')
+                              value=f'[{mention[0]}](https://steemit.com/{mention[1]}/#{mention[0]})')
     await ctx.send(embed=queue_embed)
 
+@bot.command()
+async def clear_queue(ctx):
+    cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE queue == 1')
+    db.commit()
+    await ctx.send('Queue has been successfully cleared!')
+    return
 
 @bot.command()
 async def sdl(ctx, cmd: str, *mode: str):
@@ -435,9 +456,9 @@ async def status(ctx):
         'SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()
     embed.add_field(name='Removed payouts in the last 7 days', value=round(tmp[0], 3), inline=False)
     embed.add_field(name='Total mentions approved in the last 7 days', value=tmp[1])
-    embed.add_field(name='Vote Weight', value=round(sfr.get_steem_power(), 3), inline=False)
+    embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=False)
     embed.add_field(name='Voting Mana', value=round(sfr_acc.vp(), 2), inline=False)
-    embed.add_field(name='VM --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
+    embed.add_field(name='VP --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
     embed.add_field(name='Reputation', value=round(sfr.get_reputation() , 3), inline=False)
     embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['estimated_pct'] , 1), inline=False)
