@@ -13,7 +13,6 @@ from beem.exceptions import AccountDoesNotExistsException, ContentDoesNotExistsE
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
 from beem.utils import construct_authorperm, reputation_to_score, addTzInfo
-from lightsteem.client import Client
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
@@ -25,10 +24,10 @@ cursor = db.cursor()
 sfr_name = 'steemflagrewards'
 
 nodes = NodeList().get_nodes()
+#postingkey = os.getenv('POSTINGKEY')
+#stm = Steem(node=nodes,keys=postingkey)
 stm = Steem(node=nodes)
-#stm = Steem(node='wss://gtg.steem.house:8090')
 set_shared_steem_instance(stm)
-lsc = Client()
 queueing = False
 queue_vp = 85
 
@@ -83,8 +82,8 @@ def report():
            'abuse. \n ### Would you like to delegate to the Steem Flag Rewards project and promote decentralized moderation? Here are some handy delegation links! \n '\
 		   '[50 SP](https://steemconnect.com/sign/delegateVestingShares?delegator=&delegatee=steemflagrewards&vesting_shares=50%20SP),[100 SP](https://steemconnect.com/sign/delegateVestingShares?delegator=&delegatee=steemflagrewards&vesting_shares=100%20SP),[500 SP](https://steemconnect.com/sign/delegateVestingShares?delegator=&delegatee=steemflagrewards&vesting_shares=500%20SP),[1000 SP](https://steemconnect.com/sign/delegateVestingShares?delegator=&delegatee=steemflagrewards&vesting_shares=1000%20SP)'\
 		   '\n Please, the following witnesses have supported the project. Please, consider giving them your vote for witness. Steemconnect Links included for convenience. \n' \
-		   '* [pfunk](https://v2.steemconnect.com/sign/account-witness-vote?witness=pfunk&approve=1) \n* [lukestokes.mhth](https://v2.steemconnect.com/sign/account-witness-vote?witness=lukestokes.mhth&approve=1) \n* [nextgencrypto](https://v2.steemconnect.com/sign/account-witness-vote?witness=nextgencrypto&approve=1) \n* [themarkymark](https://v2.steemconnect.com/sign/account-witness-vote?witness=themarkymark&approve=1) \n* [pjau](https://v2.steemconnect.com/sign/account-witness-vote?witness=pjau&approve=1) \n* [patrice](https://v2.steemconnect.com/sign/account-witness-vote?witness=patrice&approve=1) \n* [guiltyparties](https://v2.steemconnect.com/sign/account-witness-vote?witness=guiltyparties&approve=1) \n* [roelandp](https://v2.steemconnect.com/sign/account-witness-vote?witness=roelandp&approve=1) \n' \
-		   '\n The following users have shown considerable support and deserve a mention. Check out their blogs if you have a opportunity! \n\n @crokkon, @freebornangel, @fulltimegeek, @lyndsaybowes, @slobberchops, @steevc \n\n\n{}'.format(table)
+		   '* [pfunk](https://v2.steemconnect.com/sign/account-witness-vote?witness=pfunk&approve=1) \n* [lukestokes.mhth](https://v2.steemconnect.com/sign/account-witness-vote?witness=lukestokes.mhth&approve=1) \n* [nextgencrypto](https://v2.steemconnect.com/sign/account-witness-vote?witness=nextgencrypto&approve=1) \n* [fulltimegeek](https://v2.steemconnect.com/sign/account-witness-vote?witness=fulltimegeek&approve=1) \n* [themarkymark](https://v2.steemconnect.com/sign/account-witness-vote?witness=themarkymark&approve=1) \n* [pjau](https://v2.steemconnect.com/sign/account-witness-vote?witness=pjau&approve=1) \n* [patrice](https://v2.steemconnect.com/sign/account-witness-vote?witness=patrice&approve=1) \n* [guiltyparties](https://v2.steemconnect.com/sign/account-witness-vote?witness=guiltyparties&approve=1) \n* [roelandp](https://v2.steemconnect.com/sign/account-witness-vote?witness=roelandp&approve=1) \n' \
+		   '\n The following users have shown considerable support and deserve a mention. Check out their blogs if you have a opportunity! \n\n @crokkon, @freebornangel, @lyndsaybowes, @slobberchops, @steevc \n\n\n{}'.format(table)
     logging.info('Generated post body')
     benlist = []
     sql = cursor.execute(
@@ -133,7 +132,7 @@ async def queue_voting(ctx, sfr):
             await ctx.send('No more mentions left in the queue. Going back to instant voting mode.')
             return
         authorperm, flagger, cats, weight, follow_on = next_queued
-        comment = Comment(authorperm)
+        comment = Comment(authorperm,steem_instance=stm)
         #gets post created date without timezone info for comparing to now
         created = comment['created'].replace(tzinfo=None)
         now=datetime.datetime.utcnow().replace(microsecond=0)
@@ -144,6 +143,7 @@ async def queue_voting(ctx, sfr):
              await asyncio.sleep(ts)
         try:
             comment.upvote(weight, sfr.name)
+            await asyncio.sleep(3)
         except VotingInvalidOnArchivedPost:
             await ctx.send(
                 'Sadly one comment had to be skipped because it got too old. Maybe the author can delete the comment and write a new one?')
@@ -184,13 +184,12 @@ async def approve(ctx, link):
     logging.info('Registered command for {} by {}'.format(link, ctx.message.author.name))
     comment_perm = link.split('@')[-1]
     try:
-        flaggers_comment = Comment(comment_perm)
+        flaggers_comment = Comment(comment_perm,steem_instance=stm)
     except ContentDoesNotExistsException:
         await ctx.send('Please look at your link again. Could not find the linked comment.')
         return
     flagger = Account(flaggers_comment['author'])
     sfr = Account(sfr_name,steem_instance=stm)
-    sfr_acc = lsc.account('steemflagrewards')
     if '@steemflagrewards' not in flaggers_comment['body']:
         await ctx.send('Could not find a @steemflagrewards mention. Please check the comment.')
         return
@@ -199,17 +198,17 @@ async def approve(ctx, link):
         await ctx.send('No abuse category found.')
         return
     await ctx.send('Abuse category acknowledged as {}'.format(', '.join(cats)))
-    flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']))
+    flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']),steem_instance=stm)
     cursor.execute('SELECT * FROM steemflagrewards WHERE comment == ?', (flagged_post.authorperm,))
     if flagged_post['author'] == sfr_name:  # Check if flag is a follow on flag
         for i in range(2):
-            flagged_post = Comment('{}/{}'.format(flagged_post['parent_author'], flagged_post['parent_permlink']))
+            flagged_post = Comment('{}/{}'.format(flagged_post['parent_author'], flagged_post['parent_permlink']),steem_instance=stm)
         follow_on = True
         await ctx.send('Follow on flag spotted')
     elif cursor.fetchone():
         follow_on = True
         while True:
-            flaggers_comment = Comment(flaggers_comment['parent_author']+'/'+ flaggers_comment['parent_permlink'])
+            flaggers_comment = Comment(flaggers_comment['parent_author']+'/'+ flaggers_comment['parent_permlink'],steem_instance=stm)
             if cursor.execute('SELECT * FROM steemflagrewards WHERE post == ?',
                               (flaggers_comment.permlink,)).fetchall():
                 break
@@ -244,7 +243,7 @@ async def approve(ctx, link):
             if queueing:
                 voting_power = queue_vp * 100
             else:
-                voting_power = sfr_acc.vp() * 100
+                voting_power = sfr.vp * 100
             vote_pct = stm.rshares_to_vote_pct(int(abs(int(v['rshares'])) * ROI),  # ROI for the flaggers
                                                steem_power=sfr.sp,
                                                voting_power=voting_power)
@@ -302,7 +301,7 @@ async def approve(ctx, link):
         await postpromo.send(msg)
         sfr.claim_reward_balance()
     sfr.refresh()
-    if sfr_acc.vp() < queue_vp and not queueing:
+    if sfr.vp < queue_vp and not queueing:
         await ctx.send(
             'Hey my mojo is getting low. I should take a break...\nThat\'s why I\'ll go into queue mode now.'.format(
                 str(round(sfr.get_voting_value_SBD(), 3))))
@@ -443,7 +442,6 @@ async def sdl(ctx, cmd: str, *mode: str):
 async def status(ctx):
     """Returns the current status of the SFR account."""
     logging.info('Registered status command')
-    sfr_acc = lsc.account('steemflagrewards')
     embed = discord.Embed(title='SFR Status', description='The current status of the SFR bot and account.',
                           color=discord.Color.blue())
     sfr = Account(sfr_name,steem_instance=stm)
@@ -457,11 +455,11 @@ async def status(ctx):
     embed.add_field(name='Removed payouts in the last 7 days', value=round(tmp[0], 3), inline=False)
     embed.add_field(name='Total mentions approved in the last 7 days', value=tmp[1])
     embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=False)
-    embed.add_field(name='Voting Mana', value=round(sfr_acc.vp(), 2), inline=False)
+    embed.add_field(name='Voting Mana', value=round(sfr.vp, 2), inline=False)
     embed.add_field(name='VP --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
     embed.add_field(name='Reputation', value=round(sfr.get_reputation() , 3), inline=False)
-    embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['estimated_pct'] , 1), inline=False)
+    embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['current_pct'] , 1), inline=False)
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
@@ -482,9 +480,8 @@ async def updatenodes(ctx):
 async def on_ready():
     global queueing
     sfr = Account(sfr_name,steem_instance=stm)
-    sfr_acc = lsc.account('steemflagrewards')
     queue_length = cursor.execute('SELECT count(*) FROM steemflagrewards WHERE queue == 1;').fetchone()
-    if sfr_acc.vp() < queue_vp or queue_length[0] > 0:
+    if sfr.vp < queue_vp or queue_length[0] > 0:
         flag_comment_review = bot.get_channel(
             419711548769042432)
         await flag_comment_review.send(
@@ -496,7 +493,6 @@ async def on_ready():
 def main():
     stm.wallet.unlock(os.getenv('PASSPHRASE'))
     bot.run(os.getenv('TOKEN'))
-
 
 if __name__ == '__main__':
     main()
