@@ -317,13 +317,16 @@ async def queue(ctx):
         await ctx.send('No mention in the queue')
         return
     sfr = Account(sfr_name,steem_instance=stm)
+    embeds = []
     queue_embed = discord.Embed(title='@steemflagrewards voting queue',
                                 description=f'Next vote will happen in {sfr.get_recharge_timedelta(queue_vp) // 60}.',
                                 color=discord.Color.red())
-    for mention in queue:
-        queue_embed.add_field(name=f'Number {queue.index(mention) + 1} in the queue',
-                              value=f'[{mention[0]}](https://steemit.com/{mention[1]}/#{mention[0]})')
-    await ctx.send(embed=queue_embed)
+    queue_embed.add_field(name='Voting Mana', value=round(sfr.vp, 2))
+    embeds.append(queue_embed)
+    for cnt, mention in enumerate(queue):
+        embeds.append(discord.Embed(title=f'Number {cnt+1} in the queue', description=f'[{mention[0]}](https://steemit.com/{mention[1]}/#{mention[0]})'))
+    for e in embeds:
+        await ctx.send(embed=e)
 
 @bot.command()
 async def clear_queue(ctx):
