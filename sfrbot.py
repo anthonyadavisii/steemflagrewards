@@ -486,7 +486,7 @@ async def on_ready():
 
 
 def main():
-    stm.wallet.unlock(os.getenv('PASSPHRASE')))
+    stm.wallet.unlock(os.getenv('PASSPHRASE'))
     bot.run(os.getenv('TOKEN'))
 
 if __name__ == '__main__':
