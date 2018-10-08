@@ -464,6 +464,8 @@ async def status(ctx):
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
     embed.add_field(name='Reputation', value=round(sfr.get_reputation() , 3), inline=False)
     embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['current_pct'] , 1), inline=False)
+    tmp = cursor.execute('SELECT COUNT(*) FROM steemflagrewards WHERE queue == 1;')
+    embed.add_field(name='Queued Mentions', value=tmp.fetchone()[0])
     post = sfr.get_blog()[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
