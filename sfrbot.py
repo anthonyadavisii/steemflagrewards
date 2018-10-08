@@ -16,7 +16,8 @@ from beem.utils import construct_authorperm, reputation_to_score, addTzInfo
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    filename=datetime.datetime.utcnow().strftime('logs/steemflagrewards-%Y-%m-%d.txt'))
 
 db = sqlite3.connect('SFR.db')
 cursor = db.cursor()
