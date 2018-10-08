@@ -331,10 +331,9 @@ async def queue(ctx):
 
 @bot.command()
 async def clear_queue(ctx):
-    cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE queue == 1')
+    cursor.execute('DELETE FROM steemflagrewards WHERE queue == 1;')
     db.commit()
     await ctx.send('Queue has been successfully cleared!')
-    return
 
 @bot.command()
 async def sdl(ctx, cmd: str, *mode: str):
