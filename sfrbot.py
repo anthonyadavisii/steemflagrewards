@@ -208,9 +208,9 @@ async def approve(ctx, link):
     elif cursor.fetchone():
         follow_on = True
         while True:
-            flaggers_comment = Comment(flaggers_comment['parent_author']+'/'+ flaggers_comment['parent_permlink'],steem_instance=stm)
+            flagged_post = Comment(flaggers_comment['parent_author']+'/'+ flaggers_comment['parent_permlink'],steem_instance=stm)
             if cursor.execute('SELECT * FROM steemflagrewards WHERE post == ?',
-                              (flaggers_comment.permlink,)).fetchall():
+                              (flagged_post.permlink,)).fetchall():
                 break
     else:
         follow_on = False
