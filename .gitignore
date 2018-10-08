@@ -103,5 +103,6 @@ ENV/
 # special ide
 .idea/
 SFR.db
+logs/steemflagrewards-****-**-**.txt
 SFR.db-journal
 *.steemitdefenseleague.txt
