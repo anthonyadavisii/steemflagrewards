@@ -441,21 +441,25 @@ async def status(ctx):
                           color=discord.Color.blue())
     sfr = Account(sfr_name,steem_instance=stm)
     embed.add_field(name='Bot', value='Up and running', inline=False)
-    embed.add_field(name='Flaggers', value='{}/9'.format(cursor.execute(
-        'SELECT COUNT(DISTINCT flagger) FROM steemflagrewards WHERE included == 0;').fetchone()[0]), inline=False)
-    embed.add_field(name='Mentions', value=cursor.execute(
-        'SELECT COUNT(comment) FROM steemflagrewards WHERE included == 0;').fetchone()[0], inline=False)
-    tmp = cursor.execute(
-        'SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\');').fetchone()
-    embed.add_field(name='Removed payouts in the last 7 days', value=round(tmp[0], 3), inline=False)
-    embed.add_field(name='Total mentions approved in the last 7 days', value=tmp[1])
+    flaggers, mentions = cursor.execute(
+        "SELECT COUNT(DISTINCT flagger), COUNT(comment) FROM " \
+        "steemflagrewards WHERE included == 0;").fetchone()
+    embed.add_field(name='Flaggers', value='{}/9'.format(flaggers), inline=False)
+    embed.add_field(name='Mentions', value=mentions, inline=False)
+    payout_removed, total_mentions = cursor.execute(
+        "SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE " \
+        "created > DATETIME(\'now\', \'-7 days\');").fetchone()
+    embed.add_field(name='Removed payouts in the last 7 days',
+                    value=round(payout_removed or 0, 3), inline=False)
+    embed.add_field(name='Total mentions approved in the last 7 days',
+                    value=total_mentions)
     embed.add_field(name='Steem Power', value=round(sfr.get_steem_power(), 3), inline=False)
     embed.add_field(name='Voting Mana', value=round(sfr.vp, 2), inline=False)
     embed.add_field(name='VP --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
     embed.add_field(name='Reputation', value=round(sfr.get_reputation() , 3), inline=False)
     embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['current_pct'] , 1), inline=False)
-    post = sfr.get_blog()[0]
+    post = sfr.get_blog(limit=1)[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
                     inline=False)
