@@ -16,7 +16,7 @@ from categories import CAT_DESCRIPTION, CATEGORIES
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename='logs/log.txt')
 
 db = sqlite3.connect('SFR.db')
 cursor = db.cursor()
@@ -31,8 +31,8 @@ queue_vp = 85
 
 STEEM_MIN_REPLY_INTERVAL = 3
 STEEM_MIN_VOTE_INTERVAL = 3
-POST_PROMOTION_CHANNEL_ID = "REPLACE WITH DISCORD CHANNEL ID"
-FLAG_APPROVAL_CHANNEL_ID = "REPLACE WITH DISCORD CHANNEL ID"
+POST_PROMOTION_CHANNEL_ID = 426612204717211648
+FLAG_APPROVAL_CHANNEL_ID = 419711548769042432
 
 ##################################################
 # Uncomment for the initial setup of the database
@@ -210,9 +210,9 @@ async def approve(ctx, link):
     elif cursor.fetchone():
         follow_on = True
         while True:
-            flaggers_comment = Comment(flaggers_comment['parent_author']+'/'+ flaggers_comment['parent_permlink'],steem_instance=stm)
-            if cursor.execute('SELECT * FROM steemflagrewards WHERE post == ?',
-                              (flaggers_comment.permlink,)).fetchall():
+            flagged_post = Comment(flagged_post['parent_author']+'/'+ flagged_post['parent_permlink'],steem_instance=stm)
+            if cursor.execute('SELECT post FROM steemflagrewards WHERE post == ?',
+                              (flagged_post.authorperm,)).fetchall():
                 break
     else:
         follow_on = False
