@@ -1,4 +1,3 @@
-from categories import CAT_DESCRIPTION, CATEGORIES
 import asyncio
 import datetime
 import logging
@@ -13,10 +12,11 @@ from beem.exceptions import AccountDoesNotExistsException, ContentDoesNotExistsE
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
 from beem.utils import construct_authorperm, reputation_to_score, addTzInfo
+from categories import CAT_DESCRIPTION, CATEGORIES
 from dateutil.parser import parse
 from discord.ext.commands import Bot
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename='logs/log.txt')
 
 db = sqlite3.connect('SFR.db')
 cursor = db.cursor()
@@ -24,14 +24,15 @@ cursor = db.cursor()
 sfr_name = 'steemflagrewards'
 
 nodes = NodeList().get_nodes()
-#postingkey = os.getenv('POSTINGKEY')
-#stm = Steem(node=nodes,keys=postingkey)
 stm = Steem(node=nodes)
 set_shared_steem_instance(stm)
 queueing = False
 queue_vp = 85
 
 STEEM_MIN_REPLY_INTERVAL = 3
+STEEM_MIN_VOTE_INTERVAL = 3
+POST_PROMOTION_CHANNEL_ID = 426612204717211648
+FLAG_APPROVAL_CHANNEL_ID = 419711548769042432
 
 ##################################################
 # Uncomment for the initial setup of the database
@@ -143,10 +144,11 @@ async def queue_voting(ctx, sfr):
              await asyncio.sleep(ts)
         try:
             comment.upvote(weight, sfr.name)
-            await asyncio.sleep(3)
+            await asyncio.sleep(STEEM_MIN_VOTE_INTERVAL) # sleeps to account for STEEM_MIN_VOTE_INTERVAL
         except VotingInvalidOnArchivedPost:
             await ctx.send(
-                'Sadly one comment had to be skipped because it got too old. Maybe the author can delete the comment and write a new one?')
+                'Sadly one comment had to be skipped because it got too old.' \
+				'Maybe the author can delete the comment and write a new one?')
             cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
             db.commit()
             continue
@@ -155,7 +157,9 @@ async def queue_voting(ctx, sfr):
             cat_string = ''
             for i in cats.split(', '):
                 cat_string += CAT_DESCRIPTION[i]
-            body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting this abuse, @{}. {} This post was submitted via our Discord Community channel. Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
+            body = 'Steem Flag Rewards mention comment has been approved! Thank you for reporting' \
+			       'this abuse, @{}. {} This post was submitted via our Discord Community channel.' \
+				   'Check us out on the following link!\n[SFR Discord](https://discord.gg/7pqKmg5)'.format(
                 flagger, cat_string)
             await asyncio.sleep(get_wait_time(sfr))
             stm.post('', body,
@@ -178,7 +182,7 @@ async def approve(ctx, link):
     """Checks post body for @steemflagrewards mention and https://steemit.com/ and must be in the flag_comment_review
     channel id """
     global queueing
-    if ctx.message.channel.id != 419711548769042432:
+    if ctx.message.channel.id != FLAG_APPROVAL_CHANNEL_ID:
         await ctx.send('Send commands in the right channel please.')
         return
     logging.info('Registered command for {} by {}'.format(link, ctx.message.author.name))
@@ -208,9 +212,9 @@ async def approve(ctx, link):
     elif cursor.fetchone():
         follow_on = True
         while True:
-            flaggers_comment = Comment(flaggers_comment['parent_author']+'/'+ flaggers_comment['parent_permlink'],steem_instance=stm)
-            if cursor.execute('SELECT * FROM steemflagrewards WHERE post == ?',
-                              (flaggers_comment.permlink,)).fetchall():
+            flagged_post = Comment(flagged_post['parent_author']+'/'+ flagged_post['parent_permlink'],steem_instance=stm)
+            if cursor.execute('SELECT post FROM steemflagrewards WHERE post == ?',
+                              (flagged_post.authorperm,)).fetchall():
                 break
     else:
         follow_on = False
@@ -265,6 +269,7 @@ async def approve(ctx, link):
         ts = round(dif.total_seconds())
         difmin=round((ts/60))
         if(difmin < 15):
+             await ctx.send('Will upvote once over 15 minutes old')
              await asyncio.sleep(ts)
         flaggers_comment.upvote(weight=weight, voter=sfr.name)
         await ctx.send('Upvoted.')
@@ -297,7 +302,7 @@ async def approve(ctx, link):
         msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/{}'.format(
             r)
         await ctx.send(msg)
-        postpromo = bot.get_channel(426612204717211648)
+        postpromo = bot.get_channel(POST_PROMOTION_CHANNEL_ID)
         await postpromo.send(msg)
         sfr.claim_reward_balance()
     sfr.refresh()
@@ -483,7 +488,7 @@ async def on_ready():
     queue_length = cursor.execute('SELECT count(*) FROM steemflagrewards WHERE queue == 1;').fetchone()
     if sfr.vp < queue_vp or queue_length[0] > 0:
         flag_comment_review = bot.get_channel(
-            419711548769042432)
+            FLAG_APPROVAL_CHANNEL_ID)
         await flag_comment_review.send(
             f'Either the VP is below {queue_vp} or there are unvoted queued mentions. Going into queue mode.')
         queueing = True
