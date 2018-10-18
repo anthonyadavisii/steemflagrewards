@@ -67,6 +67,10 @@ SDL_LIST_EDITORS = [
     437647893072052233,  # Serylt
 ]
 
+# Invite link to public SFR Discord
+DISCORD_INVITE = "https://discord.gg/7pqKmg5"
+
+
 #####################################################################
 # Steem-related settings
 #####################################################################
