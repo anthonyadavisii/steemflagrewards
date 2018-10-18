@@ -1,2 +1,2 @@
-beem==0.19.54
+beem==0.20.7
 git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]
