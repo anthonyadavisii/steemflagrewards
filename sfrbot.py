@@ -11,8 +11,7 @@ from beem.comment import Comment
 from beem.exceptions import AccountDoesNotExistsException, ContentDoesNotExistsException, VotingInvalidOnArchivedPost
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
-from beem.utils import construct_authorperm, reputation_to_score, addTzInfo
-from dateutil.parser import parse
+from beem.utils import construct_authorperm, addTzInfo
 from discord.ext.commands import Bot
 
 import sfr_config as cfg
