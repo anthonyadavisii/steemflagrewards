@@ -231,7 +231,6 @@ async def approve(ctx, link):
 
             if stm.rshares_to_sbd(abs(int(v['rshares']))) < 0.0245:
                 dust = True
-                break
             follow_on_ROI = 0.1
             new_flag_ROI = 0.2
             first_flag_ROI = 0.25
@@ -327,7 +326,7 @@ async def approve(ctx, link):
         cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
             flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
             flaggers_comment['created'], False,
-            stm.rshares_to_sbd(sfrdvote['rshares']), False, 0, follow_on))
+            stm.rshares_to_sbd(sfrdvote['rshares']), False, weight, follow_on))
         db.commit()
         q = \
             cursor.execute(
