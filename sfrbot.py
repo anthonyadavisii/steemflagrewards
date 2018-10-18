@@ -134,14 +134,11 @@ async def queue_voting(ctx, sfr):
             return
         authorperm, flagger, cats, weight, follow_on = next_queued
         comment = Comment(authorperm,steem_instance=stm)
-        #gets post created date without timezone info for comparing to now
-        created = comment['created'].replace(tzinfo=None)
-        now=datetime.datetime.utcnow().replace(microsecond=0)
-        dif = now - created
-        ts = round(dif.total_seconds())
-        difmin=round((ts/60))
-        if(difmin < 15):
-             await asyncio.sleep(ts)
+        comment_age = comment.time_elapsed()
+        if comment_age < datetime.timedelta(minutes=15):
+            sleeptime = (datetime.timedelta(minutes=15) - comment_age).total_seconds()
+            logging.info('Comment is younger than 15 mins - sleeping for %.1f mins.' % (sleeptime/60))
+            await asyncio.sleep(sleeptime)
         try:
             comment.upvote(weight, sfr.name)
             await asyncio.sleep(STEEM_MIN_VOTE_INTERVAL) # sleeps to account for STEEM_MIN_VOTE_INTERVAL
@@ -263,14 +260,11 @@ async def approve(ctx, link):
         return
     if not queueing:
         logging.info('Attempting to vote now.')
-        created = flaggers_comment['created'].replace(tzinfo=None)
-        now=datetime.datetime.utcnow().replace(microsecond=0)
-        dif = now - created
-        ts = round(dif.total_seconds())
-        difmin=round((ts/60))
-        if(difmin < 15):
-             await ctx.send('Will upvote once over 15 minutes old')
-             await asyncio.sleep(ts)
+        comment_age = flaggers_comment.time_elapsed()
+        if comment_age < datetime.timedelta(minutes=15):
+            sleeptime = (datetime.timedelta(minutes=15) - comment_age).total_seconds()
+            logging.info('Comment is younger than 15 mins - sleeping for %.1f mins.' % (sleeptime/60))
+            await asyncio.sleep(sleeptime)
         flaggers_comment.upvote(weight=weight, voter=sfr.name)
         await ctx.send('Upvoted.')
         if not follow_on:
