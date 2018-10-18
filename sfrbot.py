@@ -373,7 +373,13 @@ async def sdl(ctx, cmd: str, *mode: str):
     Manage the list of the steemit defence league accounts with this command. Use it with ?sdl and one of the following
     """
     logging.info(f'{ctx.author.name} send sdl command with {cmd} ... {mode}')
-    permitted = [999999999999999999,  # Sample Discord ID
+    permitted = [405584423950614529,  # Iamstan
+                 272137261548568576,  # Leonis
+                 222012811172249600,  # Flugschwein
+                 398204160538836993,  # Naturicia
+                 347739387712372747,  # Anthonyadavisii
+                 102394130176446464,  # TheMarkyMark
+                 437647893072052233,  # Serylt
                  ]  # A list of users who are allowed to edit the list.
     if cmd == 'add':
         if ctx.author.id not in permitted:
