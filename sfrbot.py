@@ -51,6 +51,17 @@ def get_abuse_categories(comment_body):
     return cats
 
 
+def get_approval_comment_body(flagger, abuse_categories):
+    """ assemble the body for the flag approval comment """
+    cat_string = ''.join([cfg.CATEGORIES[cat] for cat in abuse_categories])
+    body = 'Steem Flag Rewards mention comment has been approved! ' \
+           'Thank you for reporting this abuse, @{}. {} This post was ' \
+           'submitted via our Discord Community channel. Check us out ' \
+           'on the following link!\n[SFR Discord]({})'.format(
+               flagger, cat_string, cfg.DISCORD_INVITE)
+    return body
+
+
 def get_wait_time(account):
     """Get the time (in seconds) required until the next comment can be posted.
     Only works for one 'queued' comment.
@@ -148,13 +159,8 @@ async def queue_voting(ctx, sfr):
             continue
         await ctx.send(f'Sucessfully voted on mention by {flagger} out of the queue.')
         if not follow_on:
-            cat_string = ''.join([cfg.CATEGORIES[cat] for cat in cats])
-            body = 'Steem Flag Rewards mention comment has been approved! ' \
-                   'Thank you for reporting this abuse, @{}. {} This post ' \
-                   'was submitted via our Discord Community channel. Check ' \
-                   'us out on the following link!\n[SFR Discord]' \
-                   '({})'.format(flagger, cat_string, cfg.DISCORD_INVITE)
             await asyncio.sleep(get_wait_time(sfr))
+            body = get_approval_comment_body(flagger, cats)
             stm.post('', body, reply_identifier=authorperm,
                      community='SFR', parse_body=True,
                      author=sfr.name)
@@ -269,15 +275,8 @@ async def approve(ctx, link):
             flaggers_comment.upvote(weight=weight, voter=sfr.name)
             await ctx.send('Upvoted.')
             if not follow_on:
-                cat_string = ''.join([cfg.CATEGORIES[cat] for cat in cats])
-                body = "Steem Flag Rewards mention comment has been " \
-                       "approved! Thank you for reporting this abuse, " \
-                       "@{}. {} This post was submitted via our Discord " \
-                       "Community channel. Check us out on the following " \
-                       "link!\n[SFR Discord]({})".format(
-                           flaggers_comment['author'], cat_string,
-                           cfg.DISCORD_INVITE)
                 await asyncio.sleep(get_wait_time(sfr))
+                body = get_approval_comment_body(flaggers_comment['author'], cats)
                 stm.post('', body,
                          reply_identifier=flaggers_comment['authorperm'],
                          community='SFR', parse_body=True,
@@ -313,15 +312,8 @@ async def approve(ctx, link):
             await queue_voting(ctx, sfr)
     else:
         if not follow_on:
-            cat_string = ''.join([cfg.CATEGORIES[cat] for cat in cats])
-            body = "Steem Flag Rewards mention comment has been " \
-                   "approved! Thank you for reporting this abuse, " \
-                   "@{}. {} This post was submitted via our Discord " \
-                   "Community channel. Check us out on the following " \
-                   "link!\n[SFR Discord]({})".format(
-                       flaggers_comment['author'], cat_string,
-                       cfg.DISCORD_INVITE)
             await asyncio.sleep(get_wait_time(sfr))
+            body = get_approval_comment_body(flaggers_comment['author'], cats)
             stm.post('', body,
                      reply_identifier=flaggers_comment['authorperm'],
                      community='SFR', parse_body=True,
