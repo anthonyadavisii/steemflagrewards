@@ -76,8 +76,8 @@ def report():
     cursor.execute(
         'INSERT INTO flaggers SELECT DISTINCT flagger FROM steemflagrewards WHERE included == 0 ORDER BY created ASC LIMIT 8;')
     sql = cursor.execute(
-        'SELECT \'[Comment](https://steemit.com/\' || post || \'#\' || comment || \')\', \'@\' || flagger, \'$\' || ROUND(payout, 3), category' \
-		'FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
+        'SELECT \'[Comment](https://steemit.com/\' || post || \'#\' || comment || \')\', \'@\' || flagger, \'$\' || ROUND(payout, 3), category'
+        'FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
     db.commit()
     table = '|Link|Flagger|Removed Rewards|Category|\n|:----|:-------|:---------------:|:--------|'
     for q in sql.fetchall():
@@ -140,7 +140,7 @@ async def queue_voting(ctx, sfr):
             await ctx.send('No more mentions left in the queue. Going back to instant voting mode.')
             return
         authorperm, flagger, cats, weight, follow_on = next_queued
-        comment = Comment(authorperm,steem_instance=stm)
+        comment = Comment(authorperm, steem_instance=stm)
         comment_age = comment.time_elapsed()
         if comment_age < datetime.timedelta(minutes=15):
             sleeptime = (datetime.timedelta(minutes=15) - comment_age).total_seconds()
@@ -148,10 +148,10 @@ async def queue_voting(ctx, sfr):
             await asyncio.sleep(sleeptime)
         try:
             comment.upvote(weight, sfr.name)
-            await asyncio.sleep(cfg.STEEM_MIN_VOTE_INTERVAL) # sleeps to account for STEEM_MIN_VOTE_INTERVAL
+            await asyncio.sleep(cfg.STEEM_MIN_VOTE_INTERVAL)  # sleeps to account for STEEM_MIN_VOTE_INTERVAL
         except VotingInvalidOnArchivedPost:
             await ctx.send(
-                'Sadly one comment had to be skipped because it got too old.' \
+                'Sadly one comment had to be skipped because it got too old.'
                 'Maybe the author can delete the comment and write a new one?')
             cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
             db.commit()
@@ -187,14 +187,14 @@ async def approve(ctx, link):
     logging.info('Registered command for {} by {}'.format(link, ctx.message.author.name))
     comment_perm = link.split('@')[-1]
     try:
-        flaggers_comment = Comment(comment_perm,steem_instance=stm)
+        flaggers_comment = Comment(comment_perm, steem_instance=stm)
     except ContentDoesNotExistsException:
         await ctx.send('Please look at your link again. Could not find the linked comment.')
         return
     flagger = Account(flaggers_comment['author'])
     sfr = Account(cfg.SFRACCOUNT, steem_instance=stm)
     if '@{}'.format(cfg.SFRACCOUNT) not in flaggers_comment['body']:
-        await ctx.send("Could not find a @%s mention. Please check " \
+        await ctx.send("Could not find a @%s mention. Please check "
                        "the comment." % (cfg.SFRACCOUNT))
         return
     cats = get_abuse_categories(flaggers_comment['body'])
@@ -202,17 +202,23 @@ async def approve(ctx, link):
         await ctx.send('No abuse category found.')
         return
     await ctx.send('Abuse category acknowledged as {}'.format(', '.join(cats)))
-    flagged_post = Comment('{}/{}'.format(flaggers_comment['parent_author'], flaggers_comment['parent_permlink']),steem_instance=stm)
+    parent_perm = construct_authorperm(flaggers_comment['parent_author'],
+                                       flaggers_comment['parent_permlink'])
+    flagged_post = Comment(parent_perm, steem_instance=stm)
     cursor.execute('SELECT * FROM steemflagrewards WHERE comment == ?', (flagged_post.authorperm,))
     if flagged_post['author'] == cfg.SFRACCOUNT:  # Check if flag is a follow on flag
         for i in range(2):
-            flagged_post = Comment('{}/{}'.format(flagged_post['parent_author'], flagged_post['parent_permlink']),steem_instance=stm)
+            parent_perm = construct_authorperm(flagged_post['parent_author'],
+                                               flagged_post['parent_permlink'])
+            flagged_post = Comment(parent_perm, steem_instance=stm)
         follow_on = True
         await ctx.send('Follow on flag spotted')
     elif cursor.fetchone():
         follow_on = True
         while True:
-            flagged_post = Comment(flagged_post['parent_author']+'/'+ flagged_post['parent_permlink'],steem_instance=stm)
+            parent_perm = construct_authorperm(flagged_post['parent_author'],
+                                               flagged_post['parent_permlink'])
+            flagged_post = Comment(parent_perm, steem_instance=stm)
             if cursor.execute('SELECT post FROM steemflagrewards WHERE post == ?',
                               (flagged_post.authorperm,)).fetchall():
                 break
@@ -257,7 +263,7 @@ async def approve(ctx, link):
                                                    steem_power=sfr.sp,
                                                    voting_power=voting_power)
             weight = max(round((vote_pct / 10000) * 100), round((min_vote_pct / 10000) * 100))
-    if dust != True:
+    if dust is not True:
         if sfr.get_vote(flaggers_comment):
             await ctx.send('Already voted on this!')
             return
@@ -355,12 +361,14 @@ async def queue(ctx):
                               value=f'[{mention[0]}](https://steemit.com/{mention[1]}/#{mention[0]})')
     await ctx.send(embed=queue_embed)
 
+
 @bot.command()
 async def clear_queue(ctx):
     cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE queue == 1')
     db.commit()
     await ctx.send('Queue has been successfully cleared!')
     return
+
 
 @bot.command()
 async def sdl(ctx, cmd: str, *mode: str):
@@ -469,12 +477,12 @@ async def status(ctx):
     sfr = Account(cfg.SFRACCOUNT, steem_instance=stm)
     embed.add_field(name='Bot', value='Up and running', inline=False)
     flaggers, mentions = cursor.execute(
-        "SELECT COUNT(DISTINCT flagger), COUNT(comment) FROM " \
+        "SELECT COUNT(DISTINCT flagger), COUNT(comment) FROM "
         "steemflagrewards WHERE included == 0;").fetchone()
     embed.add_field(name='Flaggers', value='{}/9'.format(flaggers), inline=False)
     embed.add_field(name='Mentions', value=mentions, inline=False)
     payout_removed, total_mentions = cursor.execute(
-        "SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE " \
+        "SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE "
         "created > DATETIME(\'now\', \'-7 days\');").fetchone()
     embed.add_field(name='Removed payouts in the last 7 days',
                     value=round(payout_removed or 0, 3), inline=False)
@@ -484,8 +492,8 @@ async def status(ctx):
     embed.add_field(name='Voting Mana', value=round(sfr.vp, 2), inline=False)
     embed.add_field(name='VP --> 100%', value=sfr.get_recharge_time_str(100), inline=False)
     embed.add_field(name='Vote Value', value=round(sfr.get_voting_value_SBD(), 3), inline=False)
-    embed.add_field(name='Reputation', value=round(sfr.get_reputation() , 3), inline=False)
-    embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['current_pct'] , 1), inline=False)
+    embed.add_field(name='Reputation', value=round(sfr.get_reputation(), 3), inline=False)
+    embed.add_field(name='Resource Credit %', value=round(sfr.get_rc_manabar()['current_pct'], 1), inline=False)
     post = sfr.get_blog(limit=1)[0]
     embed.add_field(name='Latest Post',
                     value='[{}](https://steemit.com/@{}/{})'.format(post['title'], post['author'], post['permlink']),
@@ -519,6 +527,7 @@ async def on_ready():
 def main():
     stm.wallet.unlock(os.getenv('PASSPHRASE'))
     bot.run(os.getenv('TOKEN'))
+
 
 if __name__ == '__main__':
     main()
