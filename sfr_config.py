@@ -70,6 +70,14 @@ SDL_LIST_EDITORS = [
 # Invite link to public SFR Discord
 DISCORD_INVITE = "https://discord.gg/7pqKmg5"
 
+# List of witnesses to mention in the reports
+WITNESSES = ['pfunk', 'lukestokes.mhth', 'nextgencrypto',
+             'fulltimegeek', 'themarkymark', 'pjau', 'patrice',
+             'guiltyparties', 'roelandp']
+
+# List of supporting users to mention in the reports
+SUPPORTERS = ['crokkon', 'freebornangel', 'lyndsaybowes',
+              'slobberchops', 'steevc']
 
 #####################################################################
 # Steem-related settings
