@@ -104,36 +104,49 @@ def build_report_body(flag_table):
     body += '\n\n\n{}'.format(flag_table)
     return body
 
-
 def report():
     """Posting a report post with the flaggers set as beneficiaries."""
     cursor.execute('DELETE FROM flaggers;')
     cursor.execute(
         'INSERT INTO flaggers SELECT DISTINCT flagger FROM steemflagrewards WHERE included == 0 ORDER BY created ASC LIMIT 8;')
     sql = cursor.execute(
-        'SELECT \'[Comment](https://steemit.com/\' || post || \'#\' || comment || \')\', \'@\' || flagger, \'$\' || ROUND(payout, 3), category'
-        'FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
+        'SELECT \'[Comment](https://steemit.com/\' || post || \'#\' || comment || \')\', \'@\' || flagger, \'$\' || ROUND(payout, 3), category, post FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
     db.commit()
-    table = '|Link|Flagger|Removed Rewards|Category|\n|:----|:-------|:---------------:|:--------|'
+    table = '|Link|Flagger|Pending Payout|Category|\n|:----|:-------|:---------------:|:--------|'
     for q in sql.fetchall():
-        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], q[2], q[3])
+        try:
+            flaggers_comment = Comment(q[4])
+            pending_payout = flaggers_comment['pending_payout_value']
+        except Exception as e:
+            print('Was unable to obtain pending payout value on https://steemit.com/'+str(q[4]))
+            logging.exception(e)
+            pending_payout = "Null"
+        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], pending_payout, q[3])
     body = build_report_body(table)
     logging.info('Generated post body')
     benlist = []
-    sql = cursor.execute(
-        '''SELECT flagger, COUNT(*) * 95 * 10 / (SELECT COUNT(*) FROM steemflagrewards WHERE included == 0 AND
-        flagger IN flaggers) FROM steemflagrewards WHERE flagger in flaggers AND included == 0 GROUP BY flagger ORDER
-        BY flagger;''')
-    # Exchange 100 in line 99 with the percentage of the post rewards you want the flaggers to receive
-    for q in sql.fetchall():
-        benlist.append({'account': q[0], 'weight': int(q[1])*10})
+    flags = []
+    #queries flags exceeding minimum payout
+    payoutflags = cursor.execute(
+        'SELECT flagger FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers')
+    for q in payoutflags.fetchall():
+        flags.append(str(q).split('\'')[1])#extracts username from tuple
+    #queries flags below dust threshold
+    dustflags = cursor.execute(
+        'SELECT flagger FROM steemflagrewards WHERE (included == 0 AND dust == 1) AND flagger IN flaggers')
+    for q in dustflags.fetchall():
+        flags.append(str(q).split('\'')[1])#extracts username from tuple
+    flaggers = set(flags)
+    for flagger in flaggers:
+        benlist.append({'account': flagger, 'weight': int(flags.count(flagger)/len(flags)*9500)})
+    benlist= sorted(benlist, key=lambda k: k['account'],reverse=False) 
     rep = stm.post(
         'Steem Flag Rewards Report - 8 Flagger Post - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")),
         body, 'steemflagrewards', tags=['steemflagrewards', 'abuse', 'steem', 'steemit', 'flag'], beneficiaries=benlist,
         parse_body=True, self_vote=False, community='busy', app='busy/2.5.4')
     cursor.execute('UPDATE steemflagrewards SET included = 1 WHERE flagger in flaggers;')
     db.commit()
-    return construct_authorperm(rep)
+    return construct_authorperm(rep['operations'][0][1])
 
 
 def fill_embed(embed: discord.Embed, names: list, template: str):
