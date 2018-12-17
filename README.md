@@ -12,6 +12,6 @@ Requirements
 With the above requirements met, you should be able to add the app to yoru Discord, run the bot code in python (make sure you input the passphrase) and test the ?approve command. I plan to create a more comprehensive guide in the future.
 
 ### TODO
-- [ ] Only one steemflagrewards comment per main post/flagged comment to prevent spam
+- [ ] Create steemflagrewards documentation on readthedocs
 - [ ] `setup.py` and PyPi listing for easier usage
-- [ ] Queuing up any votes if the VP of the @steemflagrewards account is low
+- [ ] Migration to web app versus Discord
