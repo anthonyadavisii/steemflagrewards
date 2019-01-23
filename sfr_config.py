@@ -25,7 +25,7 @@ MIN_VP = 85
 # comment.
 CATEGORIES = {
     'bid bot abuse': '\n* bid bot abuse\nYou bought votes to increase the rewards of your post above the value of its content.',
-    'collusive voting': '\ndescription placeholder',
+    'collusive voting': '\n* collusive voting\nThe votes on the content follows a repeated pattern suggestive of collusion between multiple users and /or alt accounts resulting in signficant overvaluation of content.',
     'comment self-vote violation': '\n* comment self-vote violation\nYou left a comment favorable about the post, you didn\'t upvote the post, and upvoted your own comment.',
     'comment spam': '\n* comment spam\nYour comment has been repeated multiple times without regard to the post.',
     'copy/paste': '\n* copy/paste\nYour post mostly contains copied material from a source or stock content and is not your original work.',
@@ -42,6 +42,8 @@ CATEGORIES = {
     'testing for rewards': '\n* testing for rewards\nYou claimed to be “testing” but did not decline rewards.',
     'threat': '\ndescription placeholder',
     'vote abuse': '\ndescription placeholder',
+	'porn spam': '\n* porn spam\nYou are spamming nsfw content. Often contains external image sources, affiliate links and failing to decline rewards on unoriginal content.',
+	'nsfw': '\n* nsfw\nGeneric category for abuse that is nsfw in nature.',
     'vote farming': '\n* vote farming\nYou\'re churning out content (often low quality), in quick successions with abnormal number and/or upvote size.',
 }
 
@@ -70,14 +72,28 @@ SDL_LIST_EDITORS = [
 # Invite link to public SFR Discord
 DISCORD_INVITE = "https://discord.gg/7pqKmg5"
 
-# List of witnesses to mention in the reports
-WITNESSES = ['pfunk', 'lukestokes.mhth', 'nextgencrypto',
-             'fulltimegeek', 'themarkymark', 'pjau', 'patrice',
-             'guiltyparties', 'roelandp']
+# List of witnesses with significant delegations to mention in the reports
+WITNESSES = ['lukestokes.mhth', 'yabapmatt', 'themarkymark', 'pjau', 'pfunk']
+
+OTHERWITNESS = ['patrice', 'guiltyparties']
 
 # List of supporting users to mention in the reports
-SUPPORTERS = ['crokkon', 'freebornangel', 'lyndsaybowes',
+SUPPORTERS = ['mids106', 'fulltimegeek', 'crokkon', 'freebornangel', 'lyndsaybowes',
               'slobberchops', 'steevc']
+
+# List of moderators discord IDs paired to Steem username for mod incentives
+Moderators = [
+             {'DiscordID': 406099767823958016, 'SteemUserName': 'adamada'},
+             {'DiscordID': 347739387712372747, 'SteemUserName': 'anthonyadavisii'},
+             {'DiscordID': 222012811172249600, 'SteemUserName': 'flugschwein'},
+             {'DiscordID': 405584423950614529, 'SteemUserName': 'iamstan'},
+             {'DiscordID': 370011591539949568, 'SteemUserName': 'jplaughing'},
+             {'DiscordID': 398204160538836993, 'SteemUserName': 'naturicia'},
+             {'DiscordID': 244410741736734720, 'SteemUserName': 'serylt'},
+             {'DiscordID': 272137261548568576, 'SteemUserName': 'enforcer48'},
+             {'DiscordID': 400092684422873108, 'SteemUserName': 'steemseph'},
+             {'DiscordID': 412077846626959360, 'SteemUserName': 'reazuliqbal'}
+             ]
 
 #####################################################################
 # Steem-related settings
