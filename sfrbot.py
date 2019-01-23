@@ -4,6 +4,7 @@ import logging
 import sqlite3
 import os
 import discord
+import urllib.request
 
 from beem import Steem
 from beem.account import Account
@@ -12,7 +13,11 @@ from beem.exceptions import AccountDoesNotExistsException, ContentDoesNotExistsE
 from beem.instance import set_shared_steem_instance
 from beem.nodelist import NodeList
 from beem.utils import construct_authorperm, addTzInfo
+from collections import defaultdict
 from discord.ext.commands import Bot
+
+import matplotlib.pyplot as plt #for future use
+import sfr_config as cfg
 
 import sfr_config as cfg
 
@@ -29,12 +34,11 @@ queueing = False
 ##################################################
 # Uncomment for the initial setup of the database
 # cursor.execute('''CREATE TABLE steemflagrewards
-# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL)''')
+# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL)''')
 # cursor.execute('CREATE TABLE flaggers (name TEXT)')
 # cursor.execute('CREATE TABLE sdl (name TEXT, created TEXT, delegation BOOL)')
 # db.commit()
 ##################################################
-
 
 def get_abuse_categories(comment_body):
     """Returning the matching categories of abuse"""
