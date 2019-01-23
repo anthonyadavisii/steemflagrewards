@@ -42,8 +42,8 @@ CATEGORIES = {
     'testing for rewards': '\n* testing for rewards\nYou claimed to be “testing” but did not decline rewards.',
     'threat': '\ndescription placeholder',
     'vote abuse': '\ndescription placeholder',
-	'porn spam': '\n* porn spam\nYou are spamming nsfw content. Often contains external image sources, affiliate links and failing to decline rewards on unoriginal content.',
-	'nsfw': '\n* nsfw\nGeneric category for abuse that is nsfw in nature.',
+    'porn spam': '\n* porn spam\nYou are spamming nsfw content. Often contains external image sources, affiliate links and failing to decline rewards on unoriginal content.',
+    'nsfw': '\n* nsfw\nGeneric category for abuse that is nsfw in nature.',
     'vote farming': '\n* vote farming\nYou\'re churning out content (often low quality), in quick successions with abnormal number and/or upvote size.',
 }
 
