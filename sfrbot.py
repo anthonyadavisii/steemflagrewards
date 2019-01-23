@@ -86,6 +86,49 @@ def get_wait_time(account):
     last_post_timedelta = addTzInfo(datetime.datetime.utcnow()) - account['last_post']
     return max(0, cfg.STEEM_MIN_REPLY_INTERVAL - last_post_timedelta.total_seconds())
 
+def build_mod_report_body(flag_table):
+    """ assemble the 8-flagges report post body """
+    body = '## This post triggers once the SteemFlagRewards Moderation Team Reviews and Approves 50 ' \
+           'flag mention comments via the SteemFlagRewards Abuse Fighting Community on our ' \
+           '[Discord]({})\n\nhttps://cdn.steemitimages.com/' \
+           'DQmfREGg6Kr1vVi6sbM711ZfahMmb8FpzTWJvDbM7oLmTjW/sfr-mod-fund-steemseph.jpg\n\n' \
+           'Moderators have been designated as post beneficiaries based on # of approvals.' \
+           ' Our mods have put in a lot of charitable work and effort ' \
+           'to enrich the blockchain by reviewing flags. ' \
+           ' Please, consider following this account to track this activity \n' \
+           'and help reward it accordingly. Feel free to review the flags for ' \
+           'quality and let us know how we are doing! \n' \
+           '### Would you like to delegate to the Steem Flag Rewards project ' \
+           'and promote decentralized moderation? ' \
+           'Here are some handy delegation links!\n'.format(cfg.DISCORD_INVITE)
+    for amount in [50, 100, 500, 1000]:
+        body += " [{} SP](https://steemconnect.com/sign/" \
+                "delegateVestingShares?delegator=&" \
+                "delegatee={}&vesting_shares=" \
+                "{}%20SP)".format(amount, cfg.SFRACCOUNT, amount)
+    if len(cfg.WITNESSES):
+        body += '\n\nThe following witnesses are providing significant delegations to support the SFR mission. ' \
+                'Please consider giving them your vote for witness. ' \
+                'Steemconnect links included for convenience.\n'
+        for wtn in cfg.WITNESSES:
+            body += "* [{}](https://v2.steemconnect.com/sign/account-" \
+                    "witness-vote?witness={}&approve=1)\n".format(wtn, wtn)
+    if len(cfg.OTHERWITNESS):
+        body += '\n\nThe following witnesses have shown considerable support and dedication against abuse. ' \
+                'Please consider giving them your vote for witness. ' \
+                'Steemconnect links included for convenience.\n'
+        for wtn in cfg.OTHERWITNESS:
+            body += "* [{}](https://v2.steemconnect.com/sign/account-" \
+                    "witness-vote?witness={}&approve=1)\n".format(wtn, wtn)
+    if len(cfg.SUPPORTERS):
+        list_of_supporters = ", ".join(["@{}".format(user) for user in
+                                        cfg.SUPPORTERS])
+        body += '\n\nThe following have shown considerable support and / or dedication to the cause and ' \
+                'deserve a mention. Check out their blogs if you have the ' \
+                'opportunity!\n{}'.format(list_of_supporters)
+    body += '\n\n\n{}'.format(flag_table)
+    body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>'
+    return body
 
 def build_report_body(flag_table):
     """ assemble the 8-flagges report post body """
@@ -120,6 +163,38 @@ def build_report_body(flag_table):
                 'opportunity!\n{}'.format(list_of_supporters)
     body += '\n\n\n{}'.format(flag_table)
     return body
+
+def mod_report():
+    """Posting a mod report post with the moderators set as beneficiaries."""
+    sql_list = []
+    sql = cursor.execute(
+        "SELECT CASE WHEN category = 'nsfw' OR category = 'porn spam' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
+        "ELSE '[Comment](https://steemit.com/' || post || '#' || comment || ')' END, '@' || approved_by, category, post, comment " \
+        "FROM steemflagrewards WHERE mod_included == 0 AND approved_by IN (SELECT approved_by FROM steemflagrewards WHERE mod_included == 0 LIMIT 8)" \
+        "LIMIT 50;")
+    table = '|Link|Approved By|Category|\n|:-----------|:---------------:|:--------|'
+    for q in sql.fetchall():
+        sql_list.append(q)
+        table += '\n|{}|{}|{}|'.format(q[0], q[1], q[2])
+    body = build_mod_report_body(table)
+    logging.info('Generated post body')
+    benlist = []
+    approvals = []
+    approvers = []
+    for q in sql_list:
+        approvals.append(str(q[1]).replace('@',''))#extracts username from tuple
+    approvers = set(approvals)
+    for approver in approvers:
+        benlist.append({'account': approver, 'weight': int(approvals.count(approver)/len(approvals)*9900)})
+    benlist= sorted(benlist, key=lambda k: k['account'],reverse=False) 
+    rep = stm.post(
+        'Steem Flag Rewards Mod Report - Moderator Post - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")),
+        body, 'sfr-mod-fund', tags=['steemflagrewards', 'abuse', 'steem', 'flag', 'busy'], beneficiaries=benlist,
+        parse_body=True, self_vote=False, community='busy', app='busy/2.5.6')
+    for s in sql_list:
+        query = cursor.execute('UPDATE steemflagrewards SET mod_included = 1 WHERE comment == ?',(s[4],))
+    db.commit()
+    return construct_authorperm(rep['operations'][0][1])
 
 def report():
     """Posting a report post with the flaggers set as beneficiaries."""
