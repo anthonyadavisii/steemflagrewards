@@ -54,14 +54,27 @@ def get_abuse_categories(comment_body):
     return cats
 
 
-def get_approval_comment_body(flagger, abuse_categories):
+def get_approval_comment_body(flagger, abuse_categories, dust=False):
     """ assemble the body for the flag approval comment """
-    cat_string = ''.join([cfg.CATEGORIES[cat] for cat in abuse_categories])
-    body = 'Steem Flag Rewards mention comment has been approved! ' \
-           'Thank you for reporting this abuse, @{}.\n{}\n\n' \
-           'This post was submitted via our Discord Community channel. ' \
-           'Check us out on the following link!\n[SFR Discord]({})'.format(
-               flagger, cat_string, cfg.DISCORD_INVITE)
+    cat_string = ''
+    try:
+        cat_string = ''.join([cfg.CATEGORIES[cat] for cat in abuse_categories])
+    except KeyError:
+        print('Key error grabbing category with '+str(abuse_categories))
+        logging.info('Key error grabbing category with '+str(abuse_categories))
+    if dust is True:
+        body = 'Steem Flag Rewards mention comment has been approved ' \
+               'for flagger beneficiary post rewards! ' \
+               'Thank you for reporting this abuse, @{}.\n{}\n\n' \
+               'This post was submitted via our Discord Community channel. ' \
+               'Check us out on the following link!\n[SFR Discord]({})'.format(
+                   flagger, cat_string, cfg.DISCORD_INVITE)
+    else:
+        body = 'Steem Flag Rewards mention comment has been approved! ' \
+               'Thank you for reporting this abuse, @{}.\n{}\n\n' \
+               'This post was submitted via our Discord Community channel. ' \
+               'Check us out on the following link!\n[SFR Discord]({})'.format(
+                   flagger, cat_string, cfg.DISCORD_INVITE)
     return body
 
 
