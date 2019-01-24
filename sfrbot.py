@@ -543,11 +543,37 @@ async def queue(ctx):
 
 @bot.command()
 async def clear_queue(ctx):
+    """
+    Clears entire voting queue
+    """
     cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE queue == 1')
     db.commit()
     await ctx.send('Queue has been successfully cleared!')
     return
 
+@bot.command()
+async def unqueue(ctx,permlink):
+    """
+    Removes post from queue by given permlink.
+    """
+    cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?',('@'+permlink,))
+    db.commit()
+    await ctx.send('@'+permlink+' successfully removed from queue!')
+    return
+
+@bot.command()
+async def queue_toggle(ctx):
+    """
+    Toggles bypass for queuing mechanism. If queue_bypass already set to TRUE, will set back to FALSE and vice versa.
+    """
+    global queue_bypass
+    if queue_bypass == False:
+        queue_bypass = True
+        await ctx.send('Enabled queue override.')
+    else:
+        queue_bypass = False
+        await ctx.send('Disabled queue override')
+    return
 
 @bot.command()
 async def sdl(ctx, cmd: str, *mode: str):
