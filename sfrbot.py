@@ -335,6 +335,13 @@ async def approve(ctx, link):
     channel id """
     global queueing
     dust = False
+    #obtains mods steem account based on pairing in config file and splits our username from single quotes
+    approving_mod_steem_acct = 'steemflagrewards'
+    for item in cfg.Moderators:
+        if item['DiscordID'] == ctx.author.id:
+            approving_mod_steem_acct = item['SteemUserName']
+    await ctx.send("Approving mod's Steem Account identified as "+approving_mod_steem_acct+"!")
+    print(approving_mod_steem_acct)
     if ctx.message.channel.id != cfg.FLAG_APPROVAL_CHANNEL_ID:
         await ctx.send('Send commands in the right channel please.')
         return
@@ -390,7 +397,7 @@ async def approve(ctx, link):
             await ctx.send('Downvote confirmed')
             sfrdvote = v
 
-            if stm.rshares_to_sbd(abs(int(v['rshares']))) < 0.0245:
+            if stm.rshares_to_sbd(abs(int(v['rshares']))) < 0.0195: #SFR current minimum flag threshold for upvotes
                 dust = True
             follow_on_ROI = 0.1
             new_flag_ROI = 0.2
@@ -424,18 +431,24 @@ async def approve(ctx, link):
         elif not weight:
             await ctx.send('Apparently, the post wasn\'t flagged!')
             return
-        if not queueing:
+        if not queueing or queue_bypass == True:
             logging.info('Attempting to vote now.')
             comment_age = flaggers_comment.time_elapsed()
             if comment_age < datetime.timedelta(minutes=15):
                 sleeptime = (datetime.timedelta(minutes=15) - comment_age).total_seconds()
+                await ctx.send('Comment is younger than 15 mins - sleeping for %.1f mins.' % (sleeptime/60))
                 logging.info('Comment is younger than 15 mins - sleeping for %.1f mins.' % (sleeptime/60))
                 await asyncio.sleep(sleeptime)
             flaggers_comment.upvote(weight=weight, voter=sfr.name)
             await ctx.send('Upvoted.')
+            cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+                flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
+                flaggers_comment['created'], False,
+                stm.rshares_to_sbd(sfrdvote['rshares']), False, weight, follow_on, dust, approving_mod_steem_acct, False))
+            db.commit()
             if not follow_on:
                 await asyncio.sleep(get_wait_time(sfr))
-                body = get_approval_comment_body(flaggers_comment['author'], cats)
+                body = get_approval_comment_body(flaggers_comment['author'], cats,dust)
                 stm.post('', body,
                          reply_identifier=flaggers_comment['authorperm'],
                          community='SFR', parse_body=True,
@@ -443,20 +456,26 @@ async def approve(ctx, link):
                 await ctx.send('Commented.')
         else:
             await ctx.send('Queued upvote for later on.')
-        cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
-            flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
-            flaggers_comment['created'], False,
-            stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on))
-        db.commit()
+            cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+                flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
+                flaggers_comment['created'], False,
+                stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on, dust, approving_mod_steem_acct, False))
+            db.commit()
         q = \
             cursor.execute(
                 'SELECT COUNT(DISTINCT flagger) FROM steemflagrewards WHERE included == 0;').fetchone()[
                 0]
         await ctx.send('Now at {} out of 9 needed flaggers for a report.'.format(q))
         if q > 8:
-            await ctx.send('Hit flagger threshold. Posting report.')
+            await ctx.send('Hit flagger threshold. Checking last post age.')
+            last_post_age = (Comment(construct_authorperm(sfr.get_blog_entries()[0]))).time_elapsed()
+            if last_post_age < datetime.timedelta(hours=8):
+                await ctx.send("Posted flagger report less than 8 hours ago so holding off on the report")
+                return
+            else:
+                await ctx.send("Last flagger post has been over 8 hours ago so posting report.")
             r = report()
-            msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/{}'.format(
+            msg = 'Sucessfully posted a new flagger report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/{}'.format(
                 r)
             await ctx.send(msg)
             postpromo = bot.get_channel(cfg.POST_PROMOTION_CHANNEL_ID)
@@ -472,16 +491,16 @@ async def approve(ctx, link):
     else:
         if not follow_on:
             await asyncio.sleep(get_wait_time(sfr))
-            body = get_approval_comment_body(flaggers_comment['author'], cats)
+            body = get_approval_comment_body(flaggers_comment['author'], cats,dust)
             stm.post('', body,
                      reply_identifier=flaggers_comment['authorperm'],
                      community='SFR', parse_body=True,
                      author=sfr.name)
             await ctx.send('Commented.')
-        cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+        cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
             flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
             flaggers_comment['created'], False,
-            stm.rshares_to_sbd(sfrdvote['rshares']), False, weight, follow_on))
+            stm.rshares_to_sbd(sfrdvote['rshares']), False, weight, follow_on, dust, approving_mod_steem_acct, False))
         db.commit()
         q = \
             cursor.execute(
@@ -489,7 +508,13 @@ async def approve(ctx, link):
                 0]
         await ctx.send('Now at {} out of 9 needed flaggers for a report.'.format(q))
         if q > 8:
-            await ctx.send('Hit flagger threshold. Posting report.')
+            await ctx.send('Hit flagger threshold. Checking last post age.')
+            last_post_age = (Comment(cfg.SFRACCOUNT+'/'+sfr.get_blog_entries()[0]['permlink'])).time_elapsed()
+            if last_post_age < datetime.timedelta(hours=8):
+                await ctx.send("Posted less than 8 hours ago so holding off on the report")
+                return
+            else:
+                await ctx.send("Last post has been over 8 hours ago so posting report.")
             r = report()
             msg = 'Sucessfully posted a new report! Check it out! (And upvote it as well :P)\nhttps://steemit.com/{}'.format(
                 r)
