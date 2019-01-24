@@ -267,7 +267,7 @@ def fill_embed(embed: discord.Embed, names: list, template: str):
 
 async def queue_voting(ctx, sfr):
     """
-    Voting on steemflagrewards mentions one after one once the voting power of the account reached 90%. This maintains a rather staple flagging ROI
+    Voting on steemflagrewards mentions one after one once the voting power of the account reached 90%. This maintains a rather stable flagging ROI
     """
     global queueing
     while queueing:
@@ -285,15 +285,29 @@ async def queue_voting(ctx, sfr):
         comment_age = comment.time_elapsed()
         if comment_age < datetime.timedelta(minutes=15):
             sleeptime = (datetime.timedelta(minutes=15) - comment_age).total_seconds()
+            await ctx.send('Comment is younger than 15 mins - sleeping for %.1f mins.' % (sleeptime/60))
             logging.info('Comment is younger than 15 mins - sleeping for %.1f mins.' % (sleeptime/60))
             await asyncio.sleep(sleeptime)
         try:
-            comment.upvote(weight, sfr.name)
-            await asyncio.sleep(cfg.STEEM_MIN_VOTE_INTERVAL)  # sleeps to account for STEEM_MIN_VOTE_INTERVAL
+            if not sfr.get_vote(comment):
+                comment.upvote(weight, sfr.name)
+                await asyncio.sleep(cfg.STEEM_MIN_VOTE_INTERVAL)  # sleeps to account for STEEM_MIN_VOTE_INTERVAL
+            else:
+                await ctx.send('Already voted on this!')
+                cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
+                db.commit()
+                sfr.refresh()
+                return
         except VotingInvalidOnArchivedPost:
             await ctx.send(
                 'Sadly one comment had to be skipped because it got too old.'
                 'Maybe the author can delete the comment and write a new one?')
+            cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
+            db.commit()
+            continue
+        except Exception as e:
+            await ctx.send(f'Something went wrong while upvoting {comment.author}\'s comment. Skipping it.')
+            logging.exception(e)
             cursor.execute('UPDATE steemflagrewards SET queue = 0 WHERE comment == ?', (authorperm,))
             db.commit()
             continue
@@ -309,7 +323,6 @@ async def queue_voting(ctx, sfr):
         db.commit()
         sfr.refresh()
     return
-
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
