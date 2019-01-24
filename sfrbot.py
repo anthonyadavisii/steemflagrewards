@@ -720,13 +720,17 @@ async def on_ready():
     global queueing
     sfr = Account(cfg.SFRACCOUNT, steem_instance=stm)
     queue_length = cursor.execute('SELECT count(*) FROM steemflagrewards WHERE queue == 1;').fetchone()
-    if sfr.vp < cfg.MIN_VP or queue_length[0] > 0:
+    if (sfr.vp < cfg.MIN_VP or queue_length[0] > 0) and queue_bypass == False:
         flag_comment_review = bot.get_channel(
             cfg.FLAG_APPROVAL_CHANNEL_ID)
-        await flag_comment_review.send(
-            f'Either the VP is below {cfg.MIN_VP} or there are unvoted queued mentions. Going into queue mode.')
+        try:
+            await flag_comment_review.send(
+              f'Either the VP is below {cfg.MIN_VP} or there are unvoted queued mentions. Going into queue mode.')
+        except:
+            logging.exception('something went wrong sending a message to flag_comment_review')
         queueing = True
         await queue_voting(flag_comment_review, sfr)
+
 
 
 def main():
