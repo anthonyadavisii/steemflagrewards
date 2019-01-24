@@ -144,24 +144,32 @@ def build_report_body(flag_table):
            'and promote decentralized moderation? ' \
            'Here are some handy delegation links!\n'.format(cfg.DISCORD_INVITE)
     for amount in [50, 100, 500, 1000]:
-        body += "[{} SP](https://steemconnect.com/sign/" \
+        body += " [{} SP](https://steemconnect.com/sign/" \
                 "delegateVestingShares?delegator=&" \
                 "delegatee={}&vesting_shares=" \
                 "{}%20SP)".format(amount, cfg.SFRACCOUNT, amount)
     if len(cfg.WITNESSES):
-        body += '\n\nThe following witnesses have supported the project. ' \
+        body += '\n\nThe following witnesses are providing significant delegations to support the SFR mission. ' \
                 'Please consider giving them your vote for witness. ' \
                 'Steemconnect links included for convenience.\n'
         for wtn in cfg.WITNESSES:
             body += "* [{}](https://v2.steemconnect.com/sign/account-" \
                     "witness-vote?witness={}&approve=1)\n".format(wtn, wtn)
+    if len(cfg.OTHERWITNESS):
+        body += '\n\nThe following witnesses have shown considerable support and dedication against abuse. ' \
+                'Please consider giving them your vote for witness. ' \
+                'Steemconnect links included for convenience.\n'
+        for wtn in cfg.OTHERWITNESS:
+            body += "* [{}](https://v2.steemconnect.com/sign/account-" \
+                    "witness-vote?witness={}&approve=1)\n".format(wtn, wtn)
     if len(cfg.SUPPORTERS):
         list_of_supporters = ", ".join(["@{}".format(user) for user in
                                         cfg.SUPPORTERS])
-        body += '\n\nThe following users have shown considerable support and ' \
+        body += '\n\nThe following have shown considerable support and / or dedication to the cause and ' \
                 'deserve a mention. Check out their blogs if you have the ' \
                 'opportunity!\n{}'.format(list_of_supporters)
     body += '\n\n\n{}'.format(flag_table)
+    body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>' #<img src="https://steemitimages.com/DQmNQmR2sgebuWg4pZgPyLEVD5DqtS5VjpZDhkxQya6wf4a/freezepeach-icon.png">
     return body
 
 def mod_report():
@@ -202,7 +210,9 @@ def report():
     cursor.execute(
         'INSERT INTO flaggers SELECT DISTINCT flagger FROM steemflagrewards WHERE included == 0 ORDER BY created ASC LIMIT 8;')
     sql = cursor.execute(
-        'SELECT \'[Comment](https://steemit.com/\' || post || \'#\' || comment || \')\', \'@\' || flagger, \'$\' || ROUND(payout, 3), category, post FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;')
+        "SELECT CASE WHEN category = 'nsfw' OR category = 'porn spam' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || flagger,'$' || ROUND(payout, 3), category, post " \
+        "FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;")
     db.commit()
     table = '|Link|Flagger|Pending Payout|Category|\n|:----|:-------|:---------------:|:--------|'
     for q in sql.fetchall():
@@ -234,8 +244,8 @@ def report():
     benlist= sorted(benlist, key=lambda k: k['account'],reverse=False) 
     rep = stm.post(
         'Steem Flag Rewards Report - 8 Flagger Post - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")),
-        body, 'steemflagrewards', tags=['steemflagrewards', 'abuse', 'steem', 'steemit', 'flag'], beneficiaries=benlist,
-        parse_body=True, self_vote=False, community='busy', app='busy/2.5.4')
+        body, 'steemflagrewards', tags=['steemflagrewards', 'abuse', 'steem', 'flag','busy'], beneficiaries=benlist,
+        parse_body=True, self_vote=False, community='busy', app='busy/2.5.6')
     cursor.execute('UPDATE steemflagrewards SET included = 1 WHERE flagger in flaggers;')
     db.commit()
     return construct_authorperm(rep['operations'][0][1])
