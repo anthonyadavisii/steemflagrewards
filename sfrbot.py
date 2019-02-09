@@ -1,9 +1,10 @@
 import asyncio
+import csv
 import datetime
-import logging
-import sqlite3
-import os
 import discord
+import logging
+import os
+import sqlite3
 import urllib.request
 
 from beem import Steem
@@ -21,6 +22,43 @@ import sfr_config as cfg
 
 import sfr_config as cfg
 
+class RangeDict(dict):
+    def __getitem__(self, item):
+        if type(item) != range:
+            for key in self:
+                if item in key:
+                    return self[key]
+        else:
+            return super().__getitem__(item)
+
+class_rank_dict = RangeDict({range(0,999999): 'F0 < 1 Mil',
+                             range(1000000,9999999): 'F1 1 Mil', 
+                             range(10000000,99999999): 'F2 10 Mil',
+                             range(100000000,999999999): 'F3 100 Mil',
+                             range(1000000000,9999999999): 'F4 1 Bil',
+                             range(10000000000,99999999999): 'F5 10 Bil',
+                             range(100000000000,999999999999): 'F6 100 Bil',
+                             range(1000000000000,9999999999999): 'F7 1 Tril',
+                             range(10000000000000,99999999999999): 'F8 10 Tril',
+                             range(100000000000000,999999999999999): 'F9 100 Tril',
+                             range(100000000000000,999999999999999): 'F10 1 Quad',
+                             range(1000000000000000,9999999999999999): 'F11 10 Quad',
+                             range(100000000000000000,999999999999999999): 'F12 100 Quad'}) 
+class_img_dict = RangeDict({range(0,999999): 'https://steemitimages.com/DQmT2Q3aRu5maDffFPfU3k3D1xmBrYBLxVWzRtgFZbQ916W/image.png',
+                            range(1000000,999999): 'https://steemitimages.com/DQmZc3NgQAy9XByJW8fyJURwUHGpQ6ZqP2v1YZzcnDnR3ig/image.png', 
+                            range(10000000,99999999): 'https://steemitimages.com/DQmR3SWn1Js31cvbU4XrLvGbihkasnzfestJpSfyQcHqTEf/image.png',
+                            range(100000000,999999999): 'https://steemitimages.com/DQmPL9ZuLMniaTe5YNbd9TZYhSxa2WepDCKi4yNaXBiDaER/image.png',
+                            range(1000000000,9999999999): 'https://steemitimages.com/DQmdQyp3F8EMQBpfv9ePAhMyWmD2Fh2AwvjnJLMeB3c9k3B/image.png',
+                            range(10000000000,99999999999): 'https://steemitimages.com/DQma3KW2DP9AGAgnjJkXaSBgwHMWuUdV4A3Q9S5QX6ajgyH/image.png',
+                            range(100000000000,999999999999): 'https://steemitimages.com/DQmWMzENVRgXHbSxNqmMvWk4hzSesnS2W6K4RWe4qVZaeym/image.png',
+                            range(1000000000000,9999999999999): 'https://steemitimages.com/DQmaPHtsmhTLLk7nGw63nGA42Y2wP3uKwNdBoFHYMvvbCsk/image.png',
+                            range(10000000000000,99999999999999): 'https://steemitimages.com/DQmV6NhpSJ12hJeRi7eCQ687dUq5FybZQPeFJqcDRyt19ER/image.png',
+                            range(100000000000000,999999999999999): 'https://steemitimages.com/DQmQN9VJDNH9c58YFVmUTYNGHZdBbx2J38nGA1ZXSYBzuro/image.png',
+                            range(1000000000000000,9999999999999999): 'https://steemitimages.com/DQmcrEMSQKRC6r2kAgyFwSGwL9nfJXgxqnTpCfovpajjg3B/image.png',
+                            range(10000000000000000,99999999999999999): 'https://steemitimages.com/DQmPPoYqJNETGBUMyCvVYatMr9WqzEPo7cSp4tnTx71UunM/image.png',
+                            range(100000000000000000,999999999999999999): 'https://steemitimages.com/DQmT8RoG7psGKdgXRiU7aWSDRgEMzFZtftqGPge5oGmb2KL/image.png'})
+
+
 logging.basicConfig(level=logging.INFO, filename=cfg.LOGFILE)
 
 db = sqlite3.connect(cfg.DATABASEFILE)
@@ -34,9 +72,10 @@ queueing = False
 ##################################################
 # Uncomment for the initial setup of the database
 # cursor.execute('''CREATE TABLE steemflagrewards
-# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL)''')
+# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL, flag_rshares INTEGER)''')
 # cursor.execute('CREATE TABLE flaggers (name TEXT)')
 # cursor.execute('CREATE TABLE sdl (name TEXT, created TEXT, delegation BOOL)')
+# cursor.execute('CREATE TABLE sfr_posts (post TEXT, created TEXT)')
 # db.commit()
 ##################################################
 
@@ -52,7 +91,6 @@ def get_abuse_categories(comment_body):
                 continue
             cats.append(cat)
     return cats
-
 
 def get_approval_comment_body(flagger, abuse_categories, dust=False):
     """ assemble the body for the flag approval comment """
@@ -171,6 +209,23 @@ def build_report_body(flag_table):
     body += '\n\n\n{}'.format(flag_table)
     body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>' #<img src="https://steemitimages.com/DQmNQmR2sgebuWg4pZgPyLEVD5DqtS5VjpZDhkxQya6wf4a/freezepeach-icon.png">
     return body
+
+def flag_leaderboard():
+    rank_list = []
+    rank_dict = {}
+    sql = cursor.execute('SELECT flagger, sum(flag_rshares), count(flag_rshares) FROM steemflagrewards GROUP BY flagger ORDER BY sum(flag_rshares) ASC LIMIT 20')
+    for q in sql.fetchall():
+        sbd_amount = stm.rshares_to_sbd(abs(q[1]))
+        rank_list.append({
+                                'Downvoter': q[0],
+                                'Total Flags': q[2],
+                                'rshares': q[1],
+                                'sbd_amount': sbd_amount,
+                                'Rank': class_rank_dict[abs(q[1])],
+                                'Image': class_img_dict[abs(q[1])]
+                            })
+    export_csv('sfr',rank_list)
+    return rank_list
 
 def mod_report():
     """Posting a mod report post with the moderators set as beneficiaries."""
