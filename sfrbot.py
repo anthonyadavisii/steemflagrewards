@@ -770,6 +770,22 @@ async def updatenodes(ctx):
     NodeList().update_nodes(steem_instance=stm)
     await ctx.send('Updated nodes using @fullnodeupdate.')
 
+@bot.command()
+async def update_general(ctx):
+    """
+    Updates description of general channel with SFR info
+    """
+    chan = bot.get_channel(398612955270217730)
+    sfr = Account(cfg.SFRACCOUNT, steem_instance=stm)
+    SP = sfr.get_steem_power()
+    Vote_Value = sfr.get_voting_value_SBD()
+    payout_removed, total_mentions = cursor.execute(
+        "SELECT SUM(payout), COUNT(payout) FROM steemflagrewards WHERE "
+        "created > DATETIME(\'now\', \'-7 days\');").fetchone()
+    top = "7-day Stats | Payouts Removed: $"+str(round(payout_removed or str("Error"),2))+" | Total Mentions: "+str(total_mentions or str("Error"))+" | SFR Bot's Current SP: "+str(round(SP,0))+" | Upvote Value: "+str(round(Vote_Value,3))+" SBD"
+    await chan.edit(topic=top)
+    print(chan.topic)
+    return
 
 @bot.event
 async def on_ready():
