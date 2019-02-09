@@ -44,6 +44,7 @@ class_rank_dict = RangeDict({range(0,999999): 'F0 < 1 Mil',
                              range(100000000000000,999999999999999): 'F10 1 Quad',
                              range(1000000000000000,9999999999999999): 'F11 10 Quad',
                              range(100000000000000000,999999999999999999): 'F12 100 Quad'}) 
+
 class_img_dict = RangeDict({range(0,999999): 'https://steemitimages.com/DQmT2Q3aRu5maDffFPfU3k3D1xmBrYBLxVWzRtgFZbQ916W/image.png',
                             range(1000000,999999): 'https://steemitimages.com/DQmZc3NgQAy9XByJW8fyJURwUHGpQ6ZqP2v1YZzcnDnR3ig/image.png', 
                             range(10000000,99999999): 'https://steemitimages.com/DQmR3SWn1Js31cvbU4XrLvGbihkasnzfestJpSfyQcHqTEf/image.png',
