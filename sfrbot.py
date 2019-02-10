@@ -228,6 +228,15 @@ def flag_leaderboard():
     export_csv('sfr',rank_list)
     return rank_list
 
+def export_csv(name,votelist):
+    cwd = os.getcwd()
+    filename=datetime.datetime.now().strftime(name+"%Y%m%d-%H%M%S.csv")
+    keys = votelist[0].keys()
+    outfile=open(cwd+'/'+filename,'w')
+    writer=csv.DictWriter(outfile, keys)
+    writer.writeheader()
+    writer.writerows(votelist)
+
 def mod_report():
     """Posting a mod report post with the moderators set as beneficiaries."""
     sql_list = []
