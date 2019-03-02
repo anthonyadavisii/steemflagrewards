@@ -24,9 +24,11 @@ MIN_VP = 85
 # value is included in the reply of the SFR bot to the flagger's
 # comment.
 CATEGORIES = {
+    'art paraphrasing': '\n* art paraphasing\nYou created a derivative artistic work but failed to cite the source(s) of inspiration. This is often a method employed to deceive curators in order to receive greater rewards.',
     'bid bot abuse': '\n* bid bot abuse\nYou bought votes to increase the rewards of your post above the value of its content.',
     'collusive voting': '\n* collusive voting\nThe votes on the content follows a repeated pattern suggestive of collusion between multiple users and /or alt accounts resulting in signficant overvaluation of content.',
     'comment self-vote violation': '\n* comment self-vote violation\nYou left a comment favorable about the post, you didn\'t upvote the post, and upvoted your own comment.',
+	'contest spam': '\n* contest spam\nYou created a contest requiring votes, resteems or follows for entry. SFR considers these tactics manipulative. Posts that require upvotes to enter or play in a contest or game falls under spam or abuse in the [Steemit.com FAQ](https://steemit.com/faq.html).',
     'comment spam': '\n* comment spam\nYour comment has been repeated multiple times without regard to the post.',
     'copy/paste': '\n* copy/paste\nYour post mostly contains copied material from a source or stock content and is not your original work.',
     'failure to tag nsfw': '\n* failure to tag nsfw\nYour post should be tagged NSFW when it contains nudity, gore, extreme violence or anything inappropriate for general public viewing.',
@@ -42,8 +44,8 @@ CATEGORIES = {
     'testing for rewards': '\n* testing for rewards\nYou claimed to be “testing” but did not decline rewards.',
     'threat': '\ndescription placeholder',
     'vote abuse': '\ndescription placeholder',
-    'porn spam': '\n* porn spam\nYou are spamming nsfw content. Often contains external image sources, affiliate links and failing to decline rewards on unoriginal content.',
-    'nsfw': '\n* nsfw\nGeneric category for abuse that is nsfw in nature.',
+	'porn spam': '\n* porn spam\nYou are spamming nsfw content. Often contains external image sources, affiliate links and failing to decline rewards on unoriginal content.',
+	'nsfw': '\n* nsfw\nGeneric category for abuse that is nsfw in nature.',
     'vote farming': '\n* vote farming\nYou\'re churning out content (often low quality), in quick successions with abnormal number and/or upvote size.',
 }
 
