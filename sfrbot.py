@@ -255,16 +255,58 @@ def export_csv(name,votelist):
 def mod_report():
     """Posting a mod report post with the moderators set as beneficiaries."""
     sql_list = []
+    flagged_post_data = []
     sql = cursor.execute(
-        "SELECT CASE WHEN category = 'nsfw' OR category = 'porn spam' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
-        "ELSE '[Comment](https://steemit.com/' || post || '#' || comment || ')' END, '@' || approved_by, category, post, comment " \
+        "SELECT CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || approved_by, category, post, comment, " \
+        "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
         "FROM steemflagrewards WHERE mod_included == 0 AND approved_by IN (SELECT approved_by FROM steemflagrewards WHERE mod_included == 0 LIMIT 8)" \
         "LIMIT 50;")
-    table = '|Link|Approved By|Category|\n|:-----------|:---------------:|:--------|'
+    table = '|Link|Rewards Remaining|Category|\n|:----|:----------------:|:--------|'
     for q in sql.fetchall():
+        flagged_post_dict = {}
+        try:
+            flagged_comment = Comment(q[3])
+            pending_payout = flagged_comment['pending_payout_value']
+        except Exception as e:
+            print('Was unable to obtain pending payout value on https://steemit.com/'+str(q[3]))
+            logging.exception(e)
+            pending_payout = "Null"
         sql_list.append(q)
-        table += '\n|{}|{}|{}|'.format(q[0], q[1], q[2])
+        flagged_post_dict = {'link': q[5], 'payout': pending_payout.amount, 'category': q[2]}
+        flagged_post_data.append(flagged_post_dict)
+    flagged_post_data = sorted(flagged_post_data, key=lambda k: k['payout'],reverse=True)
+    flagged_post_data = [dict(tupleized) for tupleized in set(tuple(item.items()) for item in flagged_post_data)]
+    for fpd in flagged_post_data:
+        if fpd['payout'] >0:
+            table += '\n|{}|{}|{}|'.format(fpd['link'],str(fpd['payout'])+" SBD", fpd['category'])
+    table += '\n --- \n'
+    table1 = '|Link|Approved By|Category|\n|:-----------|:---------------:|:--------|'
+    for q in sql_list:
+        table1 += '\n|{}|{}|{}|'.format(q[0], q[1], q[2])
     body = build_mod_report_body(table)
+    body += '\n\n\n{}'.format(table1)
+    sql = cursor.execute(
+        "SELECT sum(flag_rshares), sum(payout) FROM (SELECT flag_rshares, payout FROM steemflagrewards WHERE mod_included == 0 AND " \
+        "approved_by IN (SELECT approved_by FROM steemflagrewards WHERE mod_included == 0 LIMIT 8) LIMIT 50)")
+    q = sql.fetchone()
+    removed = stm.rshares_to_sbd(float(q[0]))
+    remain = q[1]
+    body += "\n --- "
+    try:
+        body += get_rewards_chart(abs(removed),abs(remain))
+    except Exception as e:
+        print(e)
+    success_ratio = round((abs(removed)/(abs(remain)+abs(removed))*100),2)
+    if(success_ratio >= 70):
+        body +="\n# Mission Accomplished! \n"
+        body +=" http://img200.imageshack.us/img200/3750/missionaccomplishedl.jpg "
+    else:
+        body +="\n# Mission Failed! \n"
+        body +=" https://static.giantbomb.com/uploads/original/0/329/1195180-psd3d036.jpg "
+    body += "Reward removal at: "+str(success_ratio)+" % \n"
+    body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>'
     logging.info('Generated post body')
     benlist = []
     approvals = []
@@ -286,25 +328,64 @@ def mod_report():
 
 def report():
     """Posting a report post with the flaggers set as beneficiaries."""
+    sql_list = []
+    flagged_post_data = []
     cursor.execute('DELETE FROM flaggers;')
     cursor.execute(
         'INSERT INTO flaggers SELECT DISTINCT flagger FROM steemflagrewards WHERE included == 0 ORDER BY created ASC LIMIT 8;')
     sql = cursor.execute(
-        "SELECT CASE WHEN category = 'nsfw' OR category = 'porn spam' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
-        "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || flagger,'$' || ROUND(payout, 3), category, post " \
+        "SELECT CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || flagger, category, post, comment, " \
+        "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
         "FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;")
     db.commit()
-    table = '|Link|Flagger|Pending Payout|Category|\n|:----|:-------|:---------------:|:--------|'
+    table = '### Flaggable Posts \n |Link|Rewards Remaining|Category|\n|:----|:------------|:--------|'
     for q in sql.fetchall():
+        flagged_post_dict = {}
+        flag_list = []
         try:
-            flaggers_comment = Comment(q[4])
-            pending_payout = flaggers_comment['pending_payout_value']
+            flagged_post = Comment(q[3])
+            pending_payout = flagged_post['pending_payout_value']
         except Exception as e:
-            print('Was unable to obtain pending payout value on https://steemit.com/'+str(q[4]))
+            print('Was unable to obtain pending payout value on https://steemit.com/'+str(q[3]))
             logging.exception(e)
-            pending_payout = "Null"
-        table += '\n|{}|{}|{}|{}|'.format(q[0], q[1], pending_payout, q[3])
+            pending_payout = 0.000
+        sql_list.append(q)
+        flagged_post_dict = {'link': q[5], 'payout': pending_payout.amount or 0.000, 'category': q[2]}
+        flagged_post_data.append(flagged_post_dict)
+    flagged_post_data = sorted(flagged_post_data, key=lambda k: k['payout'],reverse=True)
+    flagged_post_data = [dict(tupleized) for tupleized in set(tuple(item.items()) for item in flagged_post_data)]
+    for fpd in flagged_post_data:
+        if fpd['payout'] >0:
+            table += '\n|{}|{}|{}|'.format(fpd['link'],str(fpd['payout'])+" SBD", fpd['category'])
+    table += '\n --- \n'
+    table1 = '|Link|Flagger|Category|\n|:-----------|:---------:|:--------|'
+    for q in sql_list:
+        table1 += '\n|{}|{}|{}|'.format(q[0], q[1], q[2])
     body = build_report_body(table)
+    body += '\n\n\n{}'.format(table1)
+    sql = cursor.execute(
+    "SELECT sum(flag_rshares), sum(payout) FROM (SELECT flag_rshares, payout FROM steemflagrewards WHERE included == 0 AND " \
+    "flagger IN flaggers)")
+    q = sql.fetchone()
+    removed = stm.rshares_to_sbd(float(q[0]))
+    remain = q[1]
+    body += "\n --- "
+    try:
+       body += get_rewards_chart(abs(removed),abs(remain))
+    except Exception as e:
+        print(e)    
+    success_ratio = round((abs(removed)/(abs(remain)+abs(removed))*100),2)
+    if(success_ratio >= 70):
+        body +="# Mission Accomplished! \n"
+        body +=" http://img200.imageshack.us/img200/3750/missionaccomplishedl.jpg "
+    else:
+        body +="# Mission Failed! \n"
+        body +="https://static.giantbomb.com/uploads/original/0/329/1195180-psd3d036.jpg \n"
+    body += "Reward removal at: "+str(success_ratio)+" % \n\n"
+    body += flag_leaderboard()
+    body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>'
     logging.info('Generated post body')
     benlist = []
     flags = []
@@ -321,7 +402,7 @@ def report():
     flaggers = set(flags)
     for flagger in flaggers:
         benlist.append({'account': flagger, 'weight': int(flags.count(flagger)/len(flags)*9500)})
-    benlist= sorted(benlist, key=lambda k: k['account'],reverse=False) 
+    benlist= sorted(benlist, key=lambda k: k['account'],reverse=False)
     rep = stm.post(
         'Steem Flag Rewards Report - 8 Flagger Post - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")),
         body, 'steemflagrewards', tags=['steemflagrewards', 'abuse', 'steem', 'flag','busy'], beneficiaries=benlist,
