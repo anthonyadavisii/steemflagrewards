@@ -229,6 +229,7 @@ def build_report_body(flag_table):
 def flag_leaderboard():
     rank_list = []
     rank_dict = {}
+    rank_markdown = ''
     sql = cursor.execute('SELECT flagger, sum(flag_rshares), count(flag_rshares) FROM steemflagrewards GROUP BY flagger ORDER BY sum(flag_rshares) ASC LIMIT 20')
     for q in sql.fetchall():
         sbd_amount = stm.rshares_to_sbd(abs(q[1]))
@@ -236,12 +237,17 @@ def flag_leaderboard():
                                 'Downvoter': q[0],
                                 'Total Flags': q[2],
                                 'rshares': q[1],
-                                'sbd_amount': sbd_amount,
+                                'sbd_amount': round(sbd_amount,3),
                                 'Rank': class_rank_dict[abs(q[1])],
                                 'Image': class_img_dict[abs(q[1])]
                             })
     export_csv('sfr',rank_list)
-    return rank_list
+    rank_list = sorted(rank_list, key=lambda k: k['rshares'],reverse=False)
+    rank_markdown += '\n # SFR Leaderboard \n'
+    rank_markdown += '|Flagger|SBD Amount|Rank|Image|\n|:-----------:|:---------:|:--------|:--------:|'
+    for leader in rank_list:
+        rank_markdown += '\n|{}|{}|{}|{}|'.format(leader['Downvoter'],str(leader['sbd_amount'])+" SBD", leader['Rank'], leader['Image'])
+    return rank_markdown
 
 def export_csv(name,votelist):
     cwd = os.getcwd()
