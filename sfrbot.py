@@ -79,6 +79,9 @@ queueing = False
 # cursor.execute('CREATE TABLE sfr_posts (post TEXT, created TEXT)')
 # db.commit()
 ##################################################
+# Uncomment for initial setup of Plotly credential file using env variable
+# plotly.tools.set_credentials_file(username=cfg.plotlyuser, api_key=os.getenv('PLOTLY'))
+##################################################
 
 def get_abuse_categories(comment_body):
     """Returning the matching categories of abuse"""
@@ -116,6 +119,18 @@ def get_approval_comment_body(flagger, abuse_categories, dust=False):
                    flagger, cat_string, cfg.DISCORD_INVITE)
     return body
 
+def get_rewards_chart(removed, remaining):
+    labels = ['Rewards Removed','Rewards Remaining']
+    values = [removed,remaining]
+    trace = go.Pie(labels=labels, values=values) #create pie chart
+    try:
+        charturl = py.plot([trace], filename='flagger_pie_chart_'+str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")), auto_open=True) #upload pie chart
+    except Exception as e:
+        print("Chart error")
+        print(e)
+        return
+    charturl += ".png"
+    return charturl
 
 def get_wait_time(account):
     """Get the time (in seconds) required until the next comment can be posted.
@@ -771,7 +786,6 @@ async def status(ctx):
     embed.add_field(name='Awesomeness', value='Over 9000', inline=False)
     await ctx.send(embed=embed)
 
-
 @bot.command()
 async def updatenodes(ctx):
     """Updates the nodes using the built in function that is based on hourly run benchmarks. Thanks holger80 for that feature."""
@@ -812,12 +826,9 @@ async def on_ready():
         queueing = True
         await queue_voting(flag_comment_review, sfr)
 
-
-
 def main():
     stm.wallet.unlock(os.getenv('PASSPHRASE'))
     bot.run(os.getenv('TOKEN'))
-
 
 if __name__ == '__main__':
     main()
