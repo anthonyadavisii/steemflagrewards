@@ -44,7 +44,7 @@ queueing = False
 ##################################################
 # Uncomment for the initial setup of the database
 # cursor.execute('''CREATE TABLE steemflagrewards
-# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL, flag_rshares INTEGER)''')
+# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL, flag_rshares INTEGER, paid BOOL)''')
 # cursor.execute('CREATE TABLE flaggers (name TEXT)')
 # cursor.execute('CREATE TABLE sdl (name TEXT, created TEXT, delegation BOOL)')
 # cursor.execute('CREATE TABLE sfr_posts (post TEXT, created TEXT)')
@@ -227,6 +227,33 @@ def export_csv(name,votelist):
     writer=csv.DictWriter(outfile, keys)
     writer.writeheader()
     writer.writerows(votelist)
+
+def export_sfr_db():
+    sql = cursor.execute('SELECT * FROM steemflagrewards')
+    sfrdb = sql.fetchall()
+    slist = []
+    sdict = {}
+    for s in sfrdb:
+       sdict = {
+                   'flagger': s[0], 
+                   'comment': s[1], 
+                   'post': s[2], 
+                   'category': s[3], 
+                   'created': s[4], 
+                   'included': s[5], 
+                   'payout': s[6], 
+                   'queue': s[7], 
+                   'weight': s[8], 
+                   'followon': s[9], 
+                   'dust': s[10], 
+                   'approved_by': s[11], 
+                   'mod_included': s[12], 
+                   'flag_rshares': s[13],
+                   'paid': s[14]
+                }
+       slist.append(sdict)
+    export_csv('sfr_db_export',slist)
+    return slist
 
 def insert_mention(approving_mod_steem_acct,cats,dust,flagger, flaggers_comment,flagged_post, sfrdvote, weight, queueing):
     included = False
