@@ -257,6 +257,17 @@ def export_csv(name,votelist):
     writer.writeheader()
     writer.writerows(votelist)
 
+def insert_mention(approving_mod_steem_acct,cats,dust,flagger, flaggers_comment,flagged_post, sfrdvote, weight, queueing):
+    included = False
+    follow_on = False #column to be removed. follow on flag data will be archived
+    paid = False
+    mod_included = False
+    cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+        flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
+        flaggers_comment['created'], included,
+        stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on, dust, approving_mod_steem_acct, mod_included, int(sfrdvote['rshares']),paid))
+    db.commit()
+
 def mod_report():
     """Posting a mod report post with the moderators set as beneficiaries."""
     sql_list = []
