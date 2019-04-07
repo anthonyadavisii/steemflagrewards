@@ -237,8 +237,8 @@ def flag_leaderboard():
                                 'Total Flags': q[2],
                                 'rshares': q[1],
                                 'sbd_amount': round(sbd_amount,3),
-                                'Rank': class_rank_dict[abs(q[1])],
-                                'Image': class_img_dict[abs(q[1])]
+                                'Rank': cfg.class_rank_dict[abs(q[1])],
+                                'Image': cfg.class_img_dict[abs(q[1])]
                             })
     export_csv('sfr',rank_list)
     rank_list = sorted(rank_list, key=lambda k: k['rshares'],reverse=False)
@@ -267,6 +267,25 @@ def insert_mention(approving_mod_steem_acct,cats,dust,flagger, flaggers_comment,
         flaggers_comment['created'], included,
         stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on, dust, approving_mod_steem_acct, mod_included, int(sfrdvote['rshares']),paid))
     db.commit()
+
+def mod_leaderboard():
+    cfg.mod_list = []
+    rank_dict = {}
+    rank_markdown = ''
+    sql = cursor.execute("SELECT approved_by, count(approved_by) FROM steemflagrewards WHERE approved_by NOT IN ('None', 'steemflagrewards') GROUP BY approved_by ORDER BY count(approved_by) DESC")
+    for q in sql.fetchall():
+        cfg.mod_list.append({
+                                'Mod': q[0],
+                                'Total Approvals': q[1],
+                                'Mod Rank': cfg.mod_rank_dict[abs(q[1])],
+                                'Image': cfg.mod_img_dict[abs(q[1])]
+                            })
+    cfg.mod_list = sorted(cfg.mod_list, key=lambda k: k['Total Approvals'],reverse=True)
+    rank_markdown += '\n # SFR Mod Leaderboard \n'
+    rank_markdown += '|Mod|Total Approvals|Mod Rank|Image|\n|:-----------:|:---------:|:--------|:--------:|'
+    for leader in cfg.mod_list:
+        rank_markdown += '\n|{}|{}|{}|{}|'.format(leader['Mod'],str(leader['Total Approvals']), leader['Mod Rank'], leader['Image'])
+    return rank_markdown
 
 def mod_report():
     """Posting a mod report post with the moderators set as beneficiaries."""
