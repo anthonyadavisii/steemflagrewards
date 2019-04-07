@@ -266,10 +266,18 @@ def mod_report():
         "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || approved_by, category, post, comment, " \
         "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
         "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
-        "FROM steemflagrewards WHERE mod_included == 0 AND approved_by IN (SELECT approved_by FROM steemflagrewards WHERE mod_included == 0 LIMIT 8)" \
+        "FROM steemflagrewards WHERE cfg.mod_included == 0 AND approved_by IN (SELECT approved_by FROM steemflagrewards WHERE cfg.mod_included == 0 LIMIT 8)" \
         "LIMIT 50;")
-    table = '|Link|Rewards Remaining|Category|\n|:----|:----------------:|:--------|'
     for q in sql.fetchall():
+        sql_list.append(q)
+    sql_flaggable = cursor.execute( #Queries obtains flagged posts within the 5 day mark for report includsion and action
+        "SELECT DISTINCT CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || approved_by, category, post, comment, " \
+        "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
+        "FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-5 days\')")
+    table = 'Flaggable Posts \n |Link|Rewards Remaining|Category|\n|:----|:----------------:|:--------|'
+    for q in sql_flaggable.fetchall():
         flagged_post_dict = {}
         try:
             flagged_comment = Comment(q[3])
@@ -278,7 +286,6 @@ def mod_report():
             print('Was unable to obtain pending payout value on https://steemit.com/'+str(q[3]))
             logging.exception(e)
             pending_payout = "Null"
-        sql_list.append(q)
         flagged_post_dict = {'link': q[5], 'payout': pending_payout.amount, 'category': q[2]}
         flagged_post_data.append(flagged_post_dict)
     flagged_post_data = sorted(flagged_post_data, key=lambda k: k['payout'],reverse=True)
@@ -290,12 +297,11 @@ def mod_report():
     table1 = '|Link|Approved By|Category|\n|:-----------|:---------------:|:--------|'
     for q in sql_list:
         table1 += '\n|{}|{}|{}|'.format(q[0], q[1], q[2])
-    body = build_mod_report_body(table)
+    body = build_cfg.mod_report_body(table)
     body += '\n\n\n{}'.format(table1)
-    sql = cursor.execute(
-        "SELECT sum(flag_rshares), sum(payout) FROM (SELECT flag_rshares, payout FROM steemflagrewards WHERE mod_included == 0 AND " \
-        "approved_by IN (SELECT approved_by FROM steemflagrewards WHERE mod_included == 0 LIMIT 8) LIMIT 50)")
-    q = sql.fetchone()
+    sql_active = cursor.execute(
+        "SELECT sum(flag_rshares), sum(payout) FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-7 days\')")
+    q = sql_active.fetchone()
     removed = stm.rshares_to_sbd(float(q[0]))
     remain = q[1]
     body += "\n --- "
@@ -310,7 +316,8 @@ def mod_report():
     else:
         body +="\n# Mission Failed! \n"
         body +=" https://static.giantbomb.com/uploads/original/0/329/1195180-psd3d036.jpg "
-    body += "Reward removal at: "+str(success_ratio)+" % \n"
+    body += "Active SFR Flag Mention Reward removal at: "+str(success_ratio)+" % \n"
+    body += cfg.mod_leaderboard()
     body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>'
     logging.info('Generated post body')
     benlist = []
@@ -344,9 +351,17 @@ def report():
         "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
         "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
         "FROM steemflagrewards WHERE included == 0 AND flagger IN flaggers;")
+    for q in sql.fetchall():
+        sql_list.append(q)
+    sql_flaggable = cursor.execute( #Queries obtains flagged posts within the 5 day mark for report includsion and action
+        "SELECT DISTINCT CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || '#' || comment || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || flagger, category, post, comment, " \
+        "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
+        "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
+        "FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-5 days\')")
     db.commit()
     table = '### Flaggable Posts \n |Link|Rewards Remaining|Category|\n|:----|:------------|:--------|'
-    for q in sql.fetchall():
+    for q in sql_flaggable.fetchall():
         flagged_post_dict = {}
         flag_list = []
         try:
@@ -356,7 +371,6 @@ def report():
             print('Was unable to obtain pending payout value on https://steemit.com/'+str(q[3]))
             logging.exception(e)
             pending_payout = 0.000
-        sql_list.append(q)
         flagged_post_dict = {'link': q[5], 'payout': pending_payout.amount or 0.000, 'category': q[2]}
         flagged_post_data.append(flagged_post_dict)
     flagged_post_data = sorted(flagged_post_data, key=lambda k: k['payout'],reverse=True)
@@ -383,10 +397,10 @@ def report():
         print(e)    
     success_ratio = round((abs(removed)/(abs(remain)+abs(removed))*100),2)
     if(success_ratio >= 70):
-        body +="# Mission Accomplished! \n"
+        body +="\n # Mission Accomplished! \n"
         body +=" http://img200.imageshack.us/img200/3750/missionaccomplishedl.jpg "
     else:
-        body +="# Mission Failed! \n"
+        body +="\n # Mission Failed! \n"
         body +="https://static.giantbomb.com/uploads/original/0/329/1195180-psd3d036.jpg \n"
     body += "Reward removal at: "+str(success_ratio)+" % \n\n"
     body += flag_leaderboard()
@@ -415,7 +429,6 @@ def report():
     cursor.execute('UPDATE steemflagrewards SET included = 1 WHERE flagger in flaggers;')
     db.commit()
     return construct_authorperm(rep['operations'][0][1])
-
 
 def fill_embed(embed: discord.Embed, names: list, template: str):
     """
