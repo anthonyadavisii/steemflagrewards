@@ -188,11 +188,11 @@ def build_report_body(flag_table):
     """ assemble the 8-flagges report post body """
     body = '## This post triggers once we have approved flags from 8 distinct ' \
            'flaggers via the SteemFlagRewards Abuse Fighting Community on our ' \
-           '[Discord]({})\n\nhttps://steemitimages.com/' \
-           'DQmTJj2SXdXcYLh3gtsziSEUXH6WP43UG6Ltoq9EZyWjQeb/frpaccount.jpg\n\n' \
+           '[Discord]({})\n\n https://ipfs.busy.org/ipfs/' \
+           'QmPCPE97dB7HZjqWkmiKiSuuZUjy2AfUw64ZuLsVRLqvN4\n\n' \
            'Flaggers have been designated as post beneficiaries. Our goal is ' \
-           'to empower abuse fighting plankton and minnows and promote a ' \
-           'Steem that is less-friendly to abuse. It is simple. Building ' \
+           'to empower abuse fighting Steemians and promote a ' \
+           'platform that is less-friendly to abuse. It is simple. Building ' \
            'abuse fighters equals less abuse.\n'\
            '### Would you like to delegate to the Steem Flag Rewards project ' \
            'and promote decentralized moderation? ' \
@@ -223,7 +223,6 @@ def build_report_body(flag_table):
                 'deserve a mention. Check out their blogs if you have the ' \
                 'opportunity!\n{}'.format(list_of_supporters)
     body += '\n\n\n{}'.format(flag_table)
-    body += '\n\n\n <hr><div class="pull-left"><a href="https://discordapp.com/invite/fmE7Q9q"></a></div> If you feel you\'ve been wrongly flagged, check out @freezepeach, the flag abuse neutralizer. See the <a href="https://steemit.com/introduceyourself/@freezepeach/freezepeach-the-flag-abuse-neutralizer">intro post</a> for more details, or join the <a href="https://discordapp.com/invite/fmE7Q9q">discord server.</a><hr>' #<img src="https://steemitimages.com/DQmNQmR2sgebuWg4pZgPyLEVD5DqtS5VjpZDhkxQya6wf4a/freezepeach-icon.png">
     return body
 
 def flag_leaderboard():
