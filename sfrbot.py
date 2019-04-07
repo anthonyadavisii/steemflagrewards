@@ -31,35 +31,6 @@ class RangeDict(dict):
         else:
             return super().__getitem__(item)
 
-class_rank_dict = RangeDict({range(0,999999): 'F0 < 1 Mil',
-                             range(1000000,9999999): 'F1 1 Mil', 
-                             range(10000000,99999999): 'F2 10 Mil',
-                             range(100000000,999999999): 'F3 100 Mil',
-                             range(1000000000,9999999999): 'F4 1 Bil',
-                             range(10000000000,99999999999): 'F5 10 Bil',
-                             range(100000000000,999999999999): 'F6 100 Bil',
-                             range(1000000000000,9999999999999): 'F7 1 Tril',
-                             range(10000000000000,99999999999999): 'F8 10 Tril',
-                             range(100000000000000,999999999999999): 'F9 100 Tril',
-                             range(100000000000000,999999999999999): 'F10 1 Quad',
-                             range(1000000000000000,9999999999999999): 'F11 10 Quad',
-                             range(100000000000000000,999999999999999999): 'F12 100 Quad'}) 
-
-class_img_dict = RangeDict({range(0,999999): 'https://steemitimages.com/DQmT2Q3aRu5maDffFPfU3k3D1xmBrYBLxVWzRtgFZbQ916W/image.png',
-                            range(1000000,999999): 'https://steemitimages.com/DQmZc3NgQAy9XByJW8fyJURwUHGpQ6ZqP2v1YZzcnDnR3ig/image.png', 
-                            range(10000000,99999999): 'https://steemitimages.com/DQmR3SWn1Js31cvbU4XrLvGbihkasnzfestJpSfyQcHqTEf/image.png',
-                            range(100000000,999999999): 'https://steemitimages.com/DQmPL9ZuLMniaTe5YNbd9TZYhSxa2WepDCKi4yNaXBiDaER/image.png',
-                            range(1000000000,9999999999): 'https://steemitimages.com/DQmdQyp3F8EMQBpfv9ePAhMyWmD2Fh2AwvjnJLMeB3c9k3B/image.png',
-                            range(10000000000,99999999999): 'https://steemitimages.com/DQma3KW2DP9AGAgnjJkXaSBgwHMWuUdV4A3Q9S5QX6ajgyH/image.png',
-                            range(100000000000,999999999999): 'https://steemitimages.com/DQmWMzENVRgXHbSxNqmMvWk4hzSesnS2W6K4RWe4qVZaeym/image.png',
-                            range(1000000000000,9999999999999): 'https://steemitimages.com/DQmaPHtsmhTLLk7nGw63nGA42Y2wP3uKwNdBoFHYMvvbCsk/image.png',
-                            range(10000000000000,99999999999999): 'https://steemitimages.com/DQmV6NhpSJ12hJeRi7eCQ687dUq5FybZQPeFJqcDRyt19ER/image.png',
-                            range(100000000000000,999999999999999): 'https://steemitimages.com/DQmQN9VJDNH9c58YFVmUTYNGHZdBbx2J38nGA1ZXSYBzuro/image.png',
-                            range(1000000000000000,9999999999999999): 'https://steemitimages.com/DQmcrEMSQKRC6r2kAgyFwSGwL9nfJXgxqnTpCfovpajjg3B/image.png',
-                            range(10000000000000000,99999999999999999): 'https://steemitimages.com/DQmPPoYqJNETGBUMyCvVYatMr9WqzEPo7cSp4tnTx71UunM/image.png',
-                            range(100000000000000000,999999999999999999): 'https://steemitimages.com/DQmT8RoG7psGKdgXRiU7aWSDRgEMzFZtftqGPge5oGmb2KL/image.png'})
-
-
 logging.basicConfig(level=logging.INFO, filename=cfg.LOGFILE)
 
 db = sqlite3.connect(cfg.DATABASEFILE)
