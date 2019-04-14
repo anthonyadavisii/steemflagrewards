@@ -2,6 +2,15 @@
 # General Settings
 #####################################################################
 
+class RangeDict(dict):
+    def __getitem__(self, item):
+        if type(item) != range:
+            for key in self:
+                if item in key:
+                    return self[key]
+        else:
+            return super().__getitem__(item)
+
 # Location of the SFR logfile
 LOGFILE = "logs/logs.txt"
 
@@ -17,6 +26,15 @@ SFRACCOUNT = "steemflagrewards"
 
 # Minimum VP % for votes
 MIN_VP = 85
+
+#ROI values
+follow_on_ROI = 0.1
+new_flag_ROI = 0.2
+first_flag_ROI = 0.25
+ROI = 1.15
+
+#dust threshold
+dust_threshold = 0.0195
 
 # Mod Ranks
 
