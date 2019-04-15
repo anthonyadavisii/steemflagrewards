@@ -52,7 +52,7 @@ stm_eng = SteemEngineToken()
 ##################################################
 # Uncomment for the initial setup of the database and plotly credential file using env variable
 # cursor.execute('''CREATE TABLE steemflagrewards
-# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL, flag_rshares INTEGER, paid BOOL, resolved BOOL)''')
+# (flagger TEXT, comment TEXT, post TEXT, category TEXT, created TEXT, included BOOL, payout REAL, queue BOOL, weight REAL, followon BOOL, dust BOOL default '0', approved_by TEXT, mod_included BOOL, flag_rshares INTEGER, paid BOOL, resolved BOOL, parent_created TEXT)''')
 # cursor.execute('CREATE TABLE flaggers (name TEXT)')
 # cursor.execute('CREATE TABLE sfr_posts (post TEXT, created TEXT)')
 # cursor.execute('CREATE TABLE sdl (name TEXT, created TEXT, delegation BOOL)')
@@ -280,10 +280,11 @@ def insert_mention(approving_mod_steem_acct,cats,dust,flagger, flaggers_comment,
     paid = False
     resolved = False
     mod_included = False
-    cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+    cursor.execute('INSERT INTO steemflagrewards VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
         flagger.name, flaggers_comment.authorperm, flagged_post.authorperm, ', '.join(cats),
         flaggers_comment['created'], included,
-        stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on, dust, approving_mod_steem_acct, mod_included, int(sfrdvote['rshares']),paid, resolved))
+        stm.rshares_to_sbd(sfrdvote['rshares']), queueing, weight, follow_on, dust, approving_mod_steem_acct,
+		mod_included, int(sfrdvote['rshares']),paid, resolved, flagged_post['created']))
     db.commit()
 
 def mod_report():
@@ -304,7 +305,7 @@ def mod_report():
         "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || approved_by, category, post, comment, " \
         "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
         "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
-        "FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-5 days\') AND resolved == 0")
+        "FROM steemflagrewards WHERE parent_created > DATETIME(\'now\', \'-5 days\') AND resolved == 0")
     table = 'Flaggable Posts \n |Link|Rewards Remaining|Category|\n|:----|:----------------:|:--------|'
     for q in sql_flaggable.fetchall():
         flagged_post_dict = {}
@@ -387,7 +388,7 @@ def report():
         "ELSE '[Comment](https://steemit.com/\' || post || '#' || comment || ')' END, '@' || flagger, category, post, comment, " \
         "CASE WHEN category LIKE '%nsfw%' OR category LIKE '%porn spam%' THEN '[NSFW link](https://steemit.com/' || post || ')' " \
         "ELSE '[Comment](https://steemit.com/\' || post || ')' END " \
-        "FROM steemflagrewards WHERE created > DATETIME(\'now\', \'-5 days\') AND resolved == 0")
+        "FROM steemflagrewards WHERE parent_created > DATETIME(\'now\', \'-5 days\') AND resolved == 0")
     db.commit()
     table = '### Flaggable Posts \n |Link|Rewards Remaining|Category|\n|:----|:------------|:--------|'
     for q in sql_flaggable.fetchall():
