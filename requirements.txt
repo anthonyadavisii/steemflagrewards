@@ -1,2 +1,6 @@
-beem==0.20.7
 discord.py==1.0.0a1584+g1da6962
+plotly==3.6.0
+emoji==0.5.1
+privex_jsonrpc==1.0.1
+beem==0.20.21
+discord==1.0.1
