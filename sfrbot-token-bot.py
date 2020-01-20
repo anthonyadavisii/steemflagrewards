@@ -48,7 +48,11 @@ cursor = db.cursor()
 
 nodes = NodeList().get_nodes()
 stm = Steem(node='https://anyx.io')
+#Uncomment to use alternate node
 #stm = Steem(node='https://rpc.usesteem.com')
+#Uncomment to use beem nodelist
+#stm = Steem(node=nodes)
+#Uncomment for testing w/ out broadcasting transcations
 #stm = Steem(node='https://rpc.usesteem.com',nobroadcast=True)
 sfr = Account(cfg.SFRACCOUNT, steem_instance=stm)
 set_shared_steem_instance(stm)
@@ -60,6 +64,7 @@ all_flagged_posts = []
 from privex.steemengine import SteemEngineToken
 
 stm_eng = SteemEngineToken()
+#Uncomment for SE testing
 #stm_eng = SteemEngineToken(network_account="ssc-00000000000000000002")
 
 ##################################################
